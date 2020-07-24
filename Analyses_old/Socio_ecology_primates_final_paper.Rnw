@@ -1,0 +1,1831 @@
+\documentclass[a4paper,oneside,9pt]{article}
+% Alternative Options:
+  %  Paper Size: a4paper / a5paper / b5paper / letterpaper / legalpaper / executivepaper
+% Duplex: oneside / twoside
+% Base Font Size: 10pt / 11pt / 12pt
+
+
+%\usepackage{titlesec} 
+%\titleformat{\chapter} {\normalfont\LARGE\bfseries}{\thechapter}{1em}{} 
+%\titlespacing*{\chapter}{0pt}{3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex} 
+
+
+\textwidth = 450pt
+\oddsidemargin = 9pt
+\textheight = 622pt
+%% Language %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[USenglish]{babel} %francais, polish, spanish, ...
+\usepackage[T1]{fontenc}
+\usepackage[ansinew]{inputenc}
+
+\usepackage{lmodern} %Type1-font for non-english texts and characters
+
+\usepackage[round]{natbib}
+
+\usepackage{colortbl}
+\usepackage{multirow}
+
+%% Packages for Graphics & Figures %%%%%%%%%%%%%%%%%%%%%%%%%%
+  \usepackage{graphicx} %%For loading graphic files
+\usepackage{supertabular}
+\usepackage{tabularx}
+\usepackage{booktabs}
+%\usepackage{subfig} %%Subfigures inside a figure
+\usepackage{rotating}
+\usepackage{siunitx}
+\usepackage{tikz} %%Generate vector graphics from within LaTeX
+%\usepackage{pgf}
+%\usepackage{pgfplots}
+%\usetikzlibrary{patterns}
+%\usepackage{filecontents}
+\usepackage[center]{titlesec} %section in center of page
+\usepackage{float}
+%\restylefloat{table}
+%% Packages for Graphics & Figures %%%%%%%%%%%%%%%%%%%%%%%%%%
+  %%For loading graphic files
+%\usepackage{subfig} %%Subfigures inside a figure
+%\usepackage{tikz} %%Generate vector graphics from within LaTeX
+%\usepackage[a4paper]{geometry}
+%% Please note:
+  %% Images can be included using \includegraphics{filename}
+%% resp. using the dialog in the Insert menu.
+%% 
+  %% The mode "LaTeX => PDF" allows the following formats:
+  %%   .jpg  .png  .pdf  .mps
+%% 
+  %% The modes "LaTeX => DVI", "LaTeX => PS" und "LaTeX => PS => PDF"
+%% allow the following formats:
+  %%   .eps  .ps  .bmp  .pict  .pntg
+
+\usepackage{multirow}
+\usepackage{supertabular}
+\usepackage{colortbl}
+\usepackage{booktabs}
+%\usepackage[latin1]{inputenc}
+\usepackage{longtable}
+\usepackage{here}
+\usepackage{lscape}
+\usepackage{Sweave}
+\usepackage{caption}
+\captionsetup{labelformat=empty}
+\usepackage{here}
+
+
+%% Math Packages %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \usepackage{amsmath}
+%\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{wasysym}
+\tabcolsep 2pt
+%\usepackage{fancyhdr} %header
+%\pagestyle{fancy} %header
+
+
+%% Line Spacing %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\usepackage{setspace}
+%\singlespacing        %% 1-spacing (default)
+%\onehalfspacing       %% 1,5-spacing
+%\doublespacing        %% 2-spacing
+
+
+%% Other Packages %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\usepackage{a4wide} %%Smaller margins = more text per page.
+%\usepackage{fancyhdr} %%Fancy headings
+%\usepackage{longtable} %%For tables, that exceed one page
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Remarks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% TODO:
+  % 1. Edit the used packages and their options (see above).
+% 2. If you want, add a BibTeX-File to the project
+%    (e.g., 'literature.bib').
+% 3. Happy TeXing!
+  %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Options / Modifications
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\input{options} %You need a file 'options.tex' for this
+%% ==> TeXnicCenter supplies some possible option files
+%% ==> with its templates (File | New from Template...).
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% DOCUMENT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{Socioecological drivers of brain size evolution in primates: final analyses}
+\author{Sereina Graber}
+%\today
+
+\begin{document}
+
+\setkeys{Gin}{width=1\textwidth}
+\SweaveOpts{concordance=TRUE}
+\SweaveOpts{keep.source=TRUE}
+%\SweaveOpts{concordance=TRUE}
+%\SweaveOpts{concordance=TRUE}
+
+\maketitle
+
+%\hline
+\tableofcontents 
+%\hline
+
+\newpage
+
+
+%FUNCTIONS
+<<echo=F>>=
+
+###############################
+##FUNCTIONS:
+###############################
+
+#xtable function for pgls:
+tab_pgls<-function(mod){
+  if(! class(mod)=="pgls")
+    stop("model is not of type pgls")
+  r<-length(mod$model$coef)
+  tab<-matrix(NA, r, 4)
+  rownames(tab) <- attr(summary(mod)$coefficients, "dimnames")[[1]]
+  colnames(tab) <- attr(summary(mod)$coefficients, "dimnames")[[2]]
+  tab[,]<-matrix(summary(mod)$coefficients, 1, (r*4))
+  print(xtable(tab, caption=paste("PGLS. Response:",mod$namey, "; $N$=",mod$n   ,"; $R^{2}$ =",round(summary(mod)$r.squared, digits=2), "; $\\lambda$ =",round(mod$param[2], digits=2), "; AIC =", round(AIC(mod))), size="\\footnotesize", digits=3), caption.placement="top", table.placement="H")
+}
+
+
+
+library(magrittr) #package used for piping %>%
+
+#xtable function for pgls using gls function in nlme:
+tab_gls<-function(mod){
+  if(! class(mod)=="gls")
+    stop("model is not of type gls")
+  r <- mod$dims$p
+  tab <- matrix(NA, r, 4)
+  rownames(tab) <- attr(summary(mod)$tTable, "dimnames")[[1]]
+  colnames(tab) <- attr(summary(mod)$tTable, "dimnames")[[2]]
+  tab[,]<-matrix(summary(mod)$tTable, 1, (r*4))
+  re_name <- mod$call %>% deparse(.) %>% "["(1) %>% strsplit(., "~") %>% "[["(1) %>% "["(1) %>% strsplit(., "=") %>% "[["(1) %>% "["(2) #extract response variable name
+  print(xtable(tab, caption=paste("PGLS using gls(). Response:",re_name, "; $N$=",mod$dims$N   ,"; $\\lambda$ =",round(summary(mod)$modelStruct$corStruct[1], digits=2), "; AIC =", round(AIC(mod),digits=2) ), size="\\footnotesize", digits=3), caption.placement="top", table.placement="H")
+}
+
+
+
+#xtable function for phyloglm:
+tab_phyl<-function(mod){
+if(! class(mod)=="phyloglm")
+  stop("model is not of type phyloglm")
+if(mod$convergence == 1)
+  warning("model did not converge!")
+tab<-as.matrix(summary(mod)$coefficients)
+if(mod$convergence == 1)
+print(xtable(tab, caption=paste("Phylogenetic logistic regression: Not converged!!",deparse(mod$formula),"; N=", mod$n), digits=3), size="\\footnotesize", table.placement = "H", caption.placement="top") 
+else
+print(xtable(tab, caption=paste("Phylogenetic logistic regression:",deparse(mod$formula),"; $N$ =", mod$n), digits=3), size="\\footnotesize", table.placement = "H", caption.placement="top")
+}
+@
+
+%DATA PREPARATION
+<<echo=F>>=
+########################
+##DATA Preparation
+########################
+
+setwd("D:/University/PhD/Social vs. ecological factor in brain size evolution/Analyses")
+
+#data <- read.table("socioecology_primates_18.txt", header=T ,sep="\t", fill=T )
+data <- read.table("appendix_primate_data_2.txt", header=T ,sep="\t", fill=T )
+
+#exclude Callicebus_personatus `coz no brain size data available (only genus mean in van Woerden 2011):
+#data <- data[!data$Genus_species %in% c("Callicebus_personatus"), ]
+#str(data)
+
+#grep all variables which contain Soc1/Soc2/Eco1/Eco2/Morph1 or LH1:
+data <- data[,grep("Genus_species|Soc1|Soc2|Eco1|Eco2|Morph1|LH1|Jan1", colnames(data))]
+
+#grep all variables which do not contain "reference":
+data <- data[,-grep("Reference", colnames(data))]
+#str(data)
+
+#add Residuals brain size
+data$ResBrainBody <- residuals(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data, na.action=na.exclude))
+
+#make binary variables out of ordinal variables:
+data$Eco2.tool.use.wo.c <- ifelse(data$Eco2.Tool.use..Bentley.Condit.and.Smith.2010. >1, 1,0)
+data$Eco2.tool.use.w.c <- ifelse(data$Eco2.Tool.use..Bentley.Condit.and.Smith.2010. >=1, 1,0)
+#data$Soc2.Food.sharing.offspr <- ifelse(data$Soc2.FS.offspring..Jaeggi.and.van.Schaik.2011. >=1, 1,0)
+data$Soc2.Food.sharing.adults <- ifelse(data$Soc2.FS.adult..Jaeggi.and.van.Schaik.2011. >=1, 1,0)
+
+#renames to match with names in phylogenetic tree:
+#levels(data$Genus_species)[levels(data$Genus_species)=="Piliocolobus_badius"] <- "Procolobus_badius"
+levels(data$Genus_species)[levels(data$Genus_species)=="Bunopithecus_hoolock"] <- "Hoolock_hoolock"
+levels(data$Genus_species)[levels(data$Genus_species)=="Callithrix_pygmaea"] <- "Cebuella_pygmaea"
+levels(data$Genus_species)[levels(data$Genus_species)=="Hylobates_syndactylus"] <- "Symphalangus_syndactylus"
+levels(data$Genus_species)[levels(data$Genus_species)=="Callithrix_argentata"] <- "Mico_argentatus"
+#levels(data$Genus_species)[levels(data$Genus_species)=="Galago_elegantulus"] <- "Euoticus_elegantulus"
+levels(data$Genus_species)[levels(data$Genus_species)=="Hapalemur_simus"] <- "Prolemur_simus"
+levels(data$Genus_species)[levels(data$Genus_species)=="Hylobates_leucogenys"] <- "Nomascus_leucogenys"
+levels(data$Genus_species)[levels(data$Genus_species)=="Tarsius_spectrum"] <- "Tarsius_tarsier"
+levels(data$Genus_species)[levels(data$Genus_species)=="Alouatta_fusca"] <- "Alouatta_guariba"
+levels(data$Genus_species)[levels(data$Genus_species)=="Galagoides_demidoff"] <- "Galagoides_demidovii"
+levels(data$Genus_species)[levels(data$Genus_species)=="Galago_alleni"] <- "Sciurocheirus_alleni"
+levels(data$Genus_species)[levels(data$Genus_species)=="Tarsius_dianae"] <- "Tarsius_dentatus"
+levels(data$Genus_species)[levels(data$Genus_species)=="Colobus_kirkii"] <- "Piliocolobus_kirkii"
+levels(data$Genus_species)[levels(data$Genus_species)=="Callithrix_humeralifer"] <- "Callithrix_humeralifera" 
+#levels(data$Genus_species)[levels(data$Genus_species)=="Hylobates_klossi"] <- "Hylobates_klossii"
+#levels(data$Genus_species)[levels(data$Genus_species)=="Saguinus_leucops"] <- "Saguinus_leucopus"
+#levels(data$Genus_species)[levels(data$Genus_species)=="Macaca_maurus"] <- "Macaca_maura"
+#levels(data$Genus_species)[levels(data$Genus_species)=="Gorilla_gorilla"] <- "Gorilla_gorilla_gorilla"
+#levels(data$Genus_species)[levels(data$Genus_species)=="Pan_troglodytes"] <- "Pan_troglodytes_schweinfurthii"
+#levels(data$Genus_species)[levels(data$Genus_species)=="Presbytis_rubicunda"] <- "Presbytis_comata"
+#levels(data$Genus_species)[levels(data$Genus_species)=="Presbytis_potenziani"] <- "Presbytis_melalophos"
+
+#read in tree:
+Petree <- read.nexus("Perelman292res.nex")
+#tree10k <- read.nexus("consensusTree_10kTrees_Primates_Version3.nex")
+
+
+#rename data:
+data1 <- data
+
+#make factors out of factor variables:
+data1$Eco2.tool.use.wo.c <- factor(data1$Eco2.tool.use.wo.c)
+data1$Eco2.tool.use.w.c <- factor(data1$Eco2.tool.use.w.c)
+data1$Soc1.Mating.system.combined <- factor(data1$Soc1.Mating.system.combined)
+data1$Soc1.Social.system.combined <- factor(data1$Soc1.Social.system.combined)
+data1$Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015. <- factor(data1$Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015.)
+data1$Soc1.Infanticide.vulnerability.combined <- factor(data1$Soc1.Infanticide.vulnerability.combined)
+data1$Soc1.Cooperative.breeding.combined <- factor(data1$Soc1.Cooperative.breeding.combined)
+#data1$Soc2.FS.offspring..Jaeggi.and.van.Schaik.2011. <- factor(data1$Soc2.FS.offspring..Jaeggi.and.van.Schaik.2011.)
+#data1$Soc2.FS.M.M..Jaeggi.and.van.Schaik.2011. <- factor(data1$Soc2.FS.M.M..Jaeggi.and.van.Schaik.2011.)
+#data1$Soc2.FS.F.F..Jaeggi.and.van.Schaik.2011. <- factor(data1$Soc2.FS.F.F..Jaeggi.and.van.Schaik.2011.)
+#data1$Soc2.Coalitions.combined.males..Schoof.et.al..2009. <- factor(data1$Soc2.Coalitions.combined.males..Schoof.et.al..2009.)
+#data1$Soc2.Coalitions.combined.intra.inter.group..Schoof.et.al..2009. <- factor(data1$Soc2.Coalitions.combined.intra.inter.group..Schoof.et.al..2009.)
+data1$Soc2.MM.and.FF.coalitions.combined <- factor(data1$Soc2.MM.and.FF.coalitions.combined)
+#data1$Soc2.Any.sort.of.coalitions.combined <- factor(data1$Soc2.Any.sort.of.coalitions.combined)
+data1$Soc2.Potential.for.tactical.deception..Byrne.and.Whiten.1990. <- factor(data1$Soc2.Potential.for.tactical.deception..Byrne.and.Whiten.1990.)
+data1$Eco1.Predation.risk..Nunn.and.van.Schaik.2000. <- factor(data1$Eco1.Predation.risk..Nunn.and.van.Schaik.2000.)
+data1$Eco1.mobility2..Infant.carrying.combined <- factor(data1$Eco1.mobility2..Infant.carrying.combined)
+data1$Eco2.Tool.use..Bentley.Condit.and.Smith.2010. <- factor(data1$Eco2.Tool.use..Bentley.Condit.and.Smith.2010.)
+data1$Eco1.Extractive.foraging.combined <- factor(data1$Eco1.Extractive.foraging.combined)
+data1$Eco2.Hunting.combined <- factor(data1$Eco2.Hunting.combined)
+data1$Soc2.Social.hunting.combined <- factor(data1$Soc2.Social.hunting.combined)
+
+#relevel factors:
+data1$Soc1.Mating.system.combined  <- relevel(data1$Soc1.Mating.system.combined , ref="monogam")
+data1$Soc1.Social.system.combined  <- relevel(data1$Soc1.Social.system.combined , ref="solitary")
+data1$Soc1.Dispersal..Willems.et.al..2013.  <- relevel(data1$Soc1.Dispersal..Willems.et.al..2013. , ref="m")
+data1$Eco1.Activity.combined <- relevel(data1$Eco1.Activity.combined, ref="n")
+data1$Eco1.Habitat.combined <- relevel(data1$Eco1.Habitat.combined, ref="o")
+data1$Eco1.Substrate.combined <- relevel(data1$Eco1.Substrate.combined, ref="t")
+data1$Eco1.Locomotion.mode.combined <- relevel(data1$Eco1.Locomotion.mode.combined, ref="generalist")
+
+#rename variables (make shorter names):
+nanu <- grep("Soc1.AggBGE.rate.of.aggressive.between.group.encounters..Willems.and.van.Schaik.2015.", colnames(data))
+names(data)[nanu] <- "Soc1.AggBGE.rate"
+nanu <- grep("Soc1.AggBGE.rate.of.aggressive.between.group.encounters..Willems.and.van.Schaik.2015.", colnames(data1))
+names(data1)[nanu] <- "Soc1.AggBGE.rate"
+
+#add brain size from Janneke raw data:
+#data1[data1[,"Genus_species"]=="Presbytis_potenziani", "Morph1.Brain.size.combined"] <- 56.975  #raw data Janneke (JannekeAll.xlsx):62,50,56.2,57.6,53,63.8,54,59.2 ml, all females --> mean=56.975ml
+#data1[data1[,"Genus_species"]=="Brachyteles_arachnoides", "Morph1.Brain.size.combined"] <- 102.0429  #raw data Janneke (JannekeAll.xlsx):102.2 (f), 88(f), 88(f?), 118.2 (m), 110 (m), 114.4 (m), 93.5 (m) --> mean=102.0429 ml
+
+
+#remove species which are not in 10ktree tree:
+#data <- data[ ! data1$Genus_species %in% c("Colobus_verus", "Petterus_mongoz", "Presbytis_francoisi", "Presbytis_johnii", "Presbytis_phayrei", "Presbytis_vetulus", "Alouatta_villosa", "Hylobates_klossi", "Petterus_fulvus", "Presbytis_pileatus", "Saimiri_vanzolinii", "Cercocebus_aterrimus", "Petterus_macaco", "Presbytis_cristata", "Presbytis_entellus", "Presbytis_geei", "Saguinus_inustus"), ]
+
+#remove species which are not in 10ktree tree:
+#data1 <- data1[ ! data1$Genus_species %in% c("Colobus_verus", "Petterus_mongoz", "Presbytis_francoisi", "Presbytis_johnii", "Presbytis_phayrei", "Presbytis_vetulus", "Alouatta_villosa", "Hylobates_klossi", "Petterus_fulvus", "Presbytis_pileatus", "Saimiri_vanzolinii", "Cercocebus_aterrimus", "Petterus_macaco", "Presbytis_cristata", "Presbytis_entellus", "Presbytis_geei", "Saguinus_inustus"), ]
+
+
+
+#remove species which are not in Perelman tree:
+data <- data[ ! data$Genus_species %in% c("Callithrix_mauesi", "Colobus_kirkii", "Colobus_verus", "Petterus_mongoz", "Presbytis_francoisi", "Presbytis_johnii", "Presbytis_phayrei", "Presbytis_vetulus", "Alouatta_villosa", "Callithrix_humeralifer", "Cercopithecus_wolfi", "Hylobates_klossi", "Petterus_fulvus", "Presbytis_pileatus", "Saguinus_leucops", "Saimiri_vanzolinii", "Callicebus_donacophilus", "Cercocebus_aterrimus", "Macaca_maurus", "Petterus_macaco", "Presbytis_cristata", "Presbytis_entellus", "Presbytis_geei", "Prolocobus_verus", "Saguinus_inustus", "Piliocolobus_badius"), ]
+
+#remove species which are not in Perelman tree:
+data1 <- data1[ ! data1$Genus_species %in% c("Callithrix_mauesi", "Colobus_kirkii", "Colobus_verus", "Petterus_mongoz", "Presbytis_francoisi", "Presbytis_johnii", "Presbytis_phayrei", "Presbytis_vetulus", "Alouatta_villosa", "Callithrix_humeralifer", "Cercopithecus_wolfi", "Petterus_fulvus", "Presbytis_pileatus", "Saimiri_vanzolinii", "Callicebus_donacophilus", "Cercocebus_aterrimus", "Macaca_maurus", "Petterus_macaco", "Presbytis_cristata", "Presbytis_entellus", "Presbytis_geei", "Prolocobus_verus", "Saguinus_inustus", "Piliocolobus_badius"), ]
+
+
+
+
+
+
+@
+
+%ANALYSES
+
+\newpage
+
+
+
+%%%%%------------------------------------------------------------
+%%%%-------------------------------------------------------------
+\section{Opportunities}
+\subsection{Social opportunities}
+%%%--------------------------------------------------------------
+%%%%-------------------------------------------------------------
+
+<<echo=F, fig=TRUE, results=tex>>=
+
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Soc1|Soc2", colnames(data1))]
+#variables1 <- variables[c(1,2,5,6,8,9,10,14,16,19,7)] #7=dispersal
+variables1 <- variables[c(1:11)] 
+
+data_mat <- data1[,c("Genus_species", variables1)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat$Soc1.Gregariousness..Isler.and.van.Schaik.2012. <- as.numeric(as.character(dat$Soc1.Gregariousness..Isler.and.van.Schaik.2012.))
+dat$Soc1.Cooperative.breeding.combined <- as.numeric(as.character(dat$Soc1.Cooperative.breeding.combined))
+dat$Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015. <- as.numeric(as.character(dat$Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015.))
+dat$dispersal_num <- as.numeric( gsub("f|m",0 ,gsub("both", 1, dat$Soc1.Dispersal..Willems.et.al..2013.) ) )
+dat <- dat[,-grep("Soc1.Dispersal..Willems.et.al..2013.", colnames(dat))]
+colnames(dat)[grep("dispersal_num", colnames(dat))] <- "Soc1.dispersal_num"
+
+
+#make social system numerical
+dat$soc_system_num <- as.numeric(gsub("mM-mF", 3, gsub("mM-sF|sM-mF",2, gsub("sM-sF",1 ,gsub("solitary", 0, dat$Soc1.Social.system.combined) ) ) ) )
+dat <- dat[,-grep("Soc1.Social.system.combined", colnames(dat))]
+colnames(dat)[grep("soc_system_num", colnames(dat))] <- "Soc1.soc_system_num"
+
+#make mating system numerical
+dat$mating_system_num <- as.numeric(gsub("2androus",3, gsub("polygyn|polyand",2 ,gsub("monogam", 1, dat$Soc1.Mating.system.combined) ) ) )
+dat <- dat[,-grep("Soc1.Mating.system.combined", colnames(dat))]
+colnames(dat)[grep("mating_system_num", colnames(dat))] <- "Soc1.mating_system_num"
+
+#rename colnames:
+
+colnames(dat)[grep("Soc1.HR.overlap..Willems.and.van.Schaik.2015.", colnames(dat))] <- "Home range overlap"
+colnames(dat)[grep("Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015.", colnames(dat))] <- "Vocal terr. advertisement"
+colnames(dat)[grep("Soc1.Group.size.combined", colnames(dat))] <- "Group size"
+colnames(dat)[grep("Soc1.Gregariousness..Isler.and.van.Schaik.2012.", colnames(dat))] <- "Gregariousness"
+colnames(dat)[grep("Soc2.Fission.fusion.combined", colnames(dat))] <- "Fission-fusion"
+colnames(dat)[grep("Soc1.Body.size.dimorphism.combined", colnames(dat))] <- "Body size dimorphism"
+colnames(dat)[grep("Soc1.VisualTraitDim..Grueter.Isler.and.Dixson.2015.", colnames(dat))] <- "Visual trait dimorphism"
+colnames(dat)[grep("Soc1.Cooperative.breeding.combined", colnames(dat))] <- "Cooperative breeding"
+colnames(dat)[grep("Soc1.dispersal_num", colnames(dat))] <- "Dispersal"
+colnames(dat)[grep("Soc1.soc_system_num", colnames(dat))] <- "Social system"
+colnames(dat)[grep("Soc1.mating_system_num", colnames(dat))] <- "Mating system"
+
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs_social <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs_social, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Social.Opportunity"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Social.Opportunity"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Social.Opportunity"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolut brain size:
+model1<-pgls(log(Brain.Size) ~ PC1.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~ PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~ PC1.Social.Opportunity + PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+library(nlme)
+library(ape)
+#dat_gls <- data1_PC[complete.cases(data1_PC[,c("Genus_species", "Morph1.Brain.size.combined", "Morph1.Body.mass.combined..g.", "PC1", "PC2", "PC3")]),]
+#matches<-match(Petree$tip.label, dat_gls$Genus_species, nomatch=0)
+#not<-subset(Petree$tip.label, matches==0)
+#tree_pruned<-drop.tip(Petree, not)
+#rownames(dat_gls) <- dat_gls$Genus_species
+#model1 <- gls(log(Morph1.Brain.size.combined)  ~ log(Morph1.Body.mass.combined..g.) + PC1, correlation = corPagel(value=0.9, phy=tree_pruned), data=dat_gls)
+#tab_gls(model1)
+#model2 <- gls(log(Morph1.Brain.size.combined)  ~ log(Morph1.Body.mass.combined..g.) + PC2, correlation = corPagel(value=0.9, phy=tree_pruned), data=dat_gls)
+#tab_gls(model2)
+#model3 <- gls(log(Morph1.Brain.size.combined)  ~ log(Morph1.Body.mass.combined..g.) + PC3, correlation = corPagel(value=0.9, phy=tree_pruned), data=dat_gls)
+#tab_gls(model3)
+#model12 <- gls(log(Morph1.Brain.size.combined)  ~ log(Morph1.Body.mass.combined..g.) + PC1 + PC2, correlation = corPagel(value=0.9, phy=tree_pruned), data=dat_gls)
+#tab_gls(model12)
+#model13 <- gls(log(Morph1.Brain.size.combined)  ~ log(Morph1.Body.mass.combined..g.) + PC1 + PC2 + PC3, correlation = corPagel(value=0.9, phy=tree_pruned), data=dat_gls)
+#tab_gls(model13)
+
+
+plot(ResBrainBody ~ PC1.Social.Opportunity, data1_PC, xlim=c(-20,40))
+abline(lm(ResBrainBody ~ PC1.Social.Opportunity, data1_PC))
+text(data1_PC[,c("PC1.Social.Opportunity","ResBrainBody")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+
+@
+
+\newpage
+
+
+\subsubsection{Excluding fission-fusion}
+<<echo=F, fig=TRUE, results=tex>>=
+
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Soc1|Soc2", colnames(data1))]
+#variables1 <- variables[c(1,2,5,6,8,9,10,14,16,19,7)] #7=dispersal
+variables1 <- variables[c(1:5,7:11)] 
+
+data_mat <- data1[,c("Genus_species", variables1)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat$Soc1.Gregariousness..Isler.and.van.Schaik.2012. <- as.numeric(as.character(dat$Soc1.Gregariousness..Isler.and.van.Schaik.2012.))
+dat$Soc1.Cooperative.breeding.combined <- as.numeric(as.character(dat$Soc1.Cooperative.breeding.combined))
+dat$Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015. <- as.numeric(as.character(dat$Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015.))
+dat$dispersal_num <- as.numeric( gsub("f|m",0 ,gsub("both", 1, dat$Soc1.Dispersal..Willems.et.al..2013.) ) )
+dat <- dat[,-grep("Soc1.Dispersal..Willems.et.al..2013.", colnames(dat))]
+colnames(dat)[grep("dispersal_num", colnames(dat))] <- "Soc1.dispersal_num"
+
+
+#make social system numerical
+dat$soc_system_num <- as.numeric(gsub("mM-mF", 3, gsub("mM-sF|sM-mF",2, gsub("sM-sF",1 ,gsub("solitary", 0, dat$Soc1.Social.system.combined) ) ) ) )
+dat <- dat[,-grep("Soc1.Social.system.combined", colnames(dat))]
+colnames(dat)[grep("soc_system_num", colnames(dat))] <- "Soc1.soc_system_num"
+
+#make mating system numerical
+dat$mating_system_num <- as.numeric(gsub("2androus",3, gsub("polygyn|polyand",2 ,gsub("monogam", 1, dat$Soc1.Mating.system.combined) ) ) )
+dat <- dat[,-grep("Soc1.Mating.system.combined", colnames(dat))]
+colnames(dat)[grep("mating_system_num", colnames(dat))] <- "Soc1.mating_system_num"
+
+#rename colnames:
+
+colnames(dat)[grep("Soc1.HR.overlap..Willems.and.van.Schaik.2015.", colnames(dat))] <- "Home range overlap"
+colnames(dat)[grep("Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015.", colnames(dat))] <- "Vocal terr. advertisement"
+colnames(dat)[grep("Soc1.Group.size.combined", colnames(dat))] <- "Group size"
+colnames(dat)[grep("Soc1.Gregariousness..Isler.and.van.Schaik.2012.", colnames(dat))] <- "Gregariousness"
+colnames(dat)[grep("Soc2.Fission.fusion.combined", colnames(dat))] <- "Fission-fusion"
+colnames(dat)[grep("Soc1.Body.size.dimorphism.combined", colnames(dat))] <- "Body size dimorphism"
+colnames(dat)[grep("Soc1.VisualTraitDim..Grueter.Isler.and.Dixson.2015.", colnames(dat))] <- "Visual trait dimorphism"
+colnames(dat)[grep("Soc1.Cooperative.breeding.combined", colnames(dat))] <- "Cooperative breeding"
+colnames(dat)[grep("Soc1.dispersal_num", colnames(dat))] <- "Dispersal"
+colnames(dat)[grep("Soc1.soc_system_num", colnames(dat))] <- "Social system"
+colnames(dat)[grep("Soc1.mating_system_num", colnames(dat))] <- "Mating system"
+
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Social.Opportunity"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Social.Opportunity"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Social.Opportunity"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolute brain size:
+model1<-pgls(log(Brain.Size) ~ PC1.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~ PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~ PC1.Social.Opportunity + PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+
+plot(ResBrainBody ~ PC1.Social.Opportunity, data1_PC, xlim=c(-20,40))
+abline(lm(ResBrainBody ~ PC1.Social.Opportunity, data1_PC))
+text(data1_PC[,c("PC1.Social.Opportunity","ResBrainBody")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+
+@
+
+
+\newpage
+
+\subsubsection{Excluding vocal terr. adv.}
+<<echo=F, fig=TRUE, results=tex>>=
+
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Soc1|Soc2", colnames(data1))]
+#variables1 <- variables[c(1,2,5,6,8,9,10,14,16,19,7)] #7=dispersal
+variables1 <- variables[c(1:2,4:5, 7:11)] 
+
+data_mat <- data1[,c("Genus_species", variables1)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat$Soc1.Gregariousness..Isler.and.van.Schaik.2012. <- as.numeric(as.character(dat$Soc1.Gregariousness..Isler.and.van.Schaik.2012.))
+dat$Soc1.Cooperative.breeding.combined <- as.numeric(as.character(dat$Soc1.Cooperative.breeding.combined))
+#dat$Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015. <- as.numeric(as.character(dat$Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015.))
+dat$dispersal_num <- as.numeric( gsub("f|m",0 ,gsub("both", 1, dat$Soc1.Dispersal..Willems.et.al..2013.) ) )
+dat <- dat[,-grep("Soc1.Dispersal..Willems.et.al..2013.", colnames(dat))]
+colnames(dat)[grep("dispersal_num", colnames(dat))] <- "Soc1.dispersal_num"
+
+
+#make social system numerical
+dat$soc_system_num <- as.numeric(gsub("mM-mF", 3, gsub("mM-sF|sM-mF",2, gsub("sM-sF",1 ,gsub("solitary", 0, dat$Soc1.Social.system.combined) ) ) ) )
+dat <- dat[,-grep("Soc1.Social.system.combined", colnames(dat))]
+colnames(dat)[grep("soc_system_num", colnames(dat))] <- "Soc1.soc_system_num"
+
+#make mating system numerical
+dat$mating_system_num <- as.numeric(gsub("2androus",3, gsub("polygyn|polyand",2 ,gsub("monogam", 1, dat$Soc1.Mating.system.combined) ) ) )
+dat <- dat[,-grep("Soc1.Mating.system.combined", colnames(dat))]
+colnames(dat)[grep("mating_system_num", colnames(dat))] <- "Soc1.mating_system_num"
+
+#rename colnames:
+
+colnames(dat)[grep("Soc1.HR.overlap..Willems.and.van.Schaik.2015.", colnames(dat))] <- "Home range overlap"
+#colnames(dat)[grep("Soc1.Vocal.territorial.advertisement..Willems.and.van.Schaik.2015.", colnames(dat))] <- "Vocal terr. advertisement"
+colnames(dat)[grep("Soc1.Group.size.combined", colnames(dat))] <- "Group size"
+colnames(dat)[grep("Soc1.Gregariousness..Isler.and.van.Schaik.2012.", colnames(dat))] <- "Gregariousness"
+colnames(dat)[grep("Soc2.Fission.fusion.combined", colnames(dat))] <- "Fission-fusion"
+colnames(dat)[grep("Soc1.Body.size.dimorphism.combined", colnames(dat))] <- "Body size dimorphism"
+colnames(dat)[grep("Soc1.VisualTraitDim..Grueter.Isler.and.Dixson.2015.", colnames(dat))] <- "Visual trait dimorphism"
+colnames(dat)[grep("Soc1.Cooperative.breeding.combined", colnames(dat))] <- "Cooperative breeding"
+colnames(dat)[grep("Soc1.dispersal_num", colnames(dat))] <- "Dispersal"
+colnames(dat)[grep("Soc1.soc_system_num", colnames(dat))] <- "Social system"
+colnames(dat)[grep("Soc1.mating_system_num", colnames(dat))] <- "Mating system"
+
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Social.Opportunity"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Social.Opportunity"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Social.Opportunity"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolute brain size:
+model1<-pgls(log(Brain.Size) ~ PC1.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~ PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~ PC1.Social.Opportunity + PC2.Social.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+
+plot(ResBrainBody ~ PC1.Social.Opportunity, data1_PC, xlim=c(-20,40))
+abline(lm(ResBrainBody ~ PC1.Social.Opportunity, data1_PC))
+text(data1_PC[,c("PC1.Social.Opportunity","ResBrainBody")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+
+@
+
+
+\newpage
+
+
+
+%%%%%------------------------------------------------------------
+%%%%-------------------------------------------------------------
+\subsection{Ecological opportunities}
+%%%--------------------------------------------------------------
+%%%%-------------------------------------------------------------
+
+<<echo=F, fig=TRUE, results=tex>>=
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Eco1|Jan1", colnames(data1))]
+variables1 <- variables[c(1:8,10:12)]
+
+data_mat <- data1[,c("Genus_species", variables1)]
+data_mat$Eco1.Substrate.num <- ifelse(data_mat$Eco1.Substrate.combined == "a", 1, 0)
+data_mat$Eco1.Activity.num <- ifelse(data_mat$Eco1.Activity.combined == "d", 1, 0)
+data_mat$Eco1.Habitat.num <- ifelse(data_mat$Eco1.Habitat.combined == "w", 1, 0)
+ 
+data_mat <- data_mat[ ,-c(2,3,4) ]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+#rename variable names:
+colnames(dat)[grep("Eco1.Predation.risk..Nunn.and.van.Schaik.2000.", colnames(dat))] <- "Predation risk"
+colnames(dat)[grep("Eco1.mobility.1..Dindex.combined", colnames(dat))] <- "Mobility D-index"
+colnames(dat)[grep("Eco1.CV.NDVI..Janneke.Karin.data.final.", colnames(dat))] <- "Env. seasonality"
+colnames(dat)[grep("Eco1.Proportion.animal.combined", colnames(dat))] <- "% insects and meat in diet"
+colnames(dat)[grep("Eco1.Proportion.fruits.and.seeds..Janneke.data.", colnames(dat))] <- "% fruits and seeds in diet"
+colnames(dat)[grep("Eco1.Proportion.leaves..Janneke.data.", colnames(dat))] <- "% leaves in diet"
+colnames(dat)[grep("Eco1.Extractive.foraging.combined", colnames(dat))] <- "Extractive foraging"
+colnames(dat)[grep("Eco1.diet.quality...Janneke.data.", colnames(dat))] <- "Diet quality"
+colnames(dat)[grep("Eco1.Substrate.num", colnames(dat))] <- "Substrate"
+colnames(dat)[grep("Eco1.Activity.num", colnames(dat))] <- "Activity"
+colnames(dat)[grep("Eco1.Habitat.num", colnames(dat))] <- "Habitat"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs_ecology <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs_ecology, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Ecological.Opportunity"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Ecological.Opportunity"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Ecological.Opportunity"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model2<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model2)
+model12<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model12)
+
+#absolute brain size:
+model1<-pgls(log(Brain.Size) ~ PC1.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model2<-pgls(log(Brain.Size) ~ PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model2)
+model12<-pgls(log(Brain.Size) ~ PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model12)
+
+
+plot(ResBrainBody ~ PC1.Ecological.Opportunity, data1_PC, xlim=c(-20,47))
+abline(lm(ResBrainBody ~ PC1.Ecological.Opportunity, data1_PC))
+text(data1_PC[,c("PC1.Ecological.Opportunity","ResBrainBody")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+
+@
+
+\newpage
+
+\subsubsection{Excluding diet variables}
+<<echo=F, fig=TRUE, results=tex>>=
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Eco1|Jan1", colnames(data1))]
+variables1 <- variables[c(1:6)]
+
+data_mat <- data1[,c("Genus_species", variables1)]
+data_mat$Eco1.Substrate.num <- ifelse(data_mat$Eco1.Substrate.combined == "a", 1, 0)
+data_mat$Eco1.Activity.num <- ifelse(data_mat$Eco1.Activity.combined == "d", 1, 0)
+data_mat$Eco1.Habitat.num <- ifelse(data_mat$Eco1.Habitat.combined == "w", 1, 0)
+ 
+data_mat <- data_mat[ ,-c(2,3,4) ]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+#rename variable names:
+colnames(dat)[grep("Eco1.Predation.risk..Nunn.and.van.Schaik.2000.", colnames(dat))] <- "Predation risk"
+colnames(dat)[grep("Eco1.mobility.1..Dindex.combined", colnames(dat))] <- "Mobility D-index"
+colnames(dat)[grep("Eco1.CV.NDVI..Janneke.Karin.data.final.", colnames(dat))] <- "Env. seasonality"
+#colnames(dat)[grep("Eco1.Extractive.foraging.combined", colnames(dat))] <- "Extractive foraging"
+colnames(dat)[grep("Eco1.Substrate.num", colnames(dat))] <- "Substrate"
+colnames(dat)[grep("Eco1.Activity.num", colnames(dat))] <- "Activity"
+colnames(dat)[grep("Eco1.Habitat.num", colnames(dat))] <- "Habitat"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Ecological.Opportunity"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Ecological.Opportunity"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Ecological.Opportunity"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model2<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model2)
+model12<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model12)
+
+#absolute brain size:
+model1<-pgls(log(Brain.Size) ~ PC1.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model2<-pgls(log(Brain.Size) ~ PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model2)
+model12<-pgls(log(Brain.Size) ~ PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model12)
+
+
+plot(ResBrainBody ~ PC1.Ecological.Opportunity, data1_PC, xlim=c(-20,47))
+abline(lm(ResBrainBody ~ PC1.Ecological.Opportunity, data1_PC))
+text(data1_PC[,c("PC1.Ecological.Opportunity","ResBrainBody")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+
+@
+
+\newpage
+
+\subsubsection{Excluding extractive foraging}
+<<echo=F, fig=TRUE, results=tex>>=
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Eco1|Jan1", colnames(data1))]
+variables1 <- variables[c(1:8,10,12)]
+
+data_mat <- data1[,c("Genus_species", variables1)]
+data_mat$Eco1.Substrate.num <- ifelse(data_mat$Eco1.Substrate.combined == "a", 1, 0)
+data_mat$Eco1.Activity.num <- ifelse(data_mat$Eco1.Activity.combined == "d", 1, 0)
+data_mat$Eco1.Habitat.num <- ifelse(data_mat$Eco1.Habitat.combined == "w", 1, 0)
+ 
+data_mat <- data_mat[ ,-c(2,3,4) ]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+#rename variable names:
+colnames(dat)[grep("Eco1.Predation.risk..Nunn.and.van.Schaik.2000.", colnames(dat))] <- "Predation risk"
+colnames(dat)[grep("Eco1.mobility.1..Dindex.combined", colnames(dat))] <- "Mobility D-index"
+colnames(dat)[grep("Eco1.CV.NDVI..Janneke.Karin.data.final.", colnames(dat))] <- "Env. seasonality"
+colnames(dat)[grep("Eco1.Proportion.animal.combined", colnames(dat))] <- "% insects and meat in diet"
+colnames(dat)[grep("Eco1.Proportion.fruits.and.seeds..Janneke.data.", colnames(dat))] <- "% fruits and seeds in diet"
+colnames(dat)[grep("Eco1.Proportion.leaves..Janneke.data.", colnames(dat))] <- "% leaves in diet"
+colnames(dat)[grep("Eco1.Extractive.foraging.combined", colnames(dat))] <- "Extractive foraging"
+colnames(dat)[grep("Eco1.diet.quality...Janneke.data.", colnames(dat))] <- "Diet quality"
+colnames(dat)[grep("Eco1.Substrate.num", colnames(dat))] <- "Substrate"
+colnames(dat)[grep("Eco1.Activity.num", colnames(dat))] <- "Activity"
+colnames(dat)[grep("Eco1.Habitat.num", colnames(dat))] <- "Habitat"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Ecological.Opportunity"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Ecological.Opportunity"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Ecological.Opportunity"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model2<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model2)
+model12<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model12)
+
+#absolute brain size:
+model1<-pgls(log(Brain.Size) ~ PC1.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model1)
+model2<-pgls(log(Brain.Size) ~ PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model2)
+model12<-pgls(log(Brain.Size) ~ PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model12)
+
+
+plot(ResBrainBody ~ PC1.Ecological.Opportunity, data1_PC, xlim=c(-20,47))
+abline(lm(ResBrainBody ~ PC1.Ecological.Opportunity, data1_PC))
+text(data1_PC[,c("PC1.Ecological.Opportunity","ResBrainBody")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+
+@
+
+
+\newpage
+
+
+
+
+%%%-----------------------------------------------------
+%%%-----------------------------------------------------
+\subsection{Social and Ecological opportunities - common sample}
+%%%-----------------------------------------------------
+%%%-----------------------------------------------------
+
+<<echo=F, results=tex>>=
+
+data1_PC_social <- merge(data1, PCs_social, by="Genus_species", all.x=T)
+data1_PC_soc_eco <- merge(data1_PC_social, PCs_ecology, by="Genus_species", all.x=T)
+
+
+data1_PC_soc_eco <- data1_PC_soc_eco[complete.cases(data1_PC_soc_eco[,c("Genus_species", "Morph1.Brain.size.combined","PC1.x","PC1.y")]), ]
+
+data1_PC_soc_eco$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC_soc_eco, na.action=na.exclude))
+
+colnames(data1_PC_soc_eco)[grep("PC1.x", colnames(data1_PC_soc_eco))] <- "PC1.Social.Opportunity"
+colnames(data1_PC_soc_eco)[grep("PC2.x", colnames(data1_PC_soc_eco))] <- "PC2.Social.Opportunity"
+colnames(data1_PC_soc_eco)[grep("PC3.x", colnames(data1_PC_soc_eco))] <- "PC3.Social.Opportunity"
+colnames(data1_PC_soc_eco)[grep("PC1.y", colnames(data1_PC_soc_eco))] <- "PC1.Ecological.Opportunity"
+colnames(data1_PC_soc_eco)[grep("PC2.y", colnames(data1_PC_soc_eco))] <- "PC2.Ecological.Opportunity"
+colnames(data1_PC_soc_eco)[grep("PC3.y", colnames(data1_PC_soc_eco))] <- "PC3.Ecological.Opportunity"
+colnames(data1_PC_soc_eco)[grep("Morph1.Brain.size.combined", colnames(data1_PC_soc_eco))] <- "Brain.Size"
+colnames(data1_PC_soc_eco)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC_soc_eco))] <- "Body.Mass"
+
+
+
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_soc_eco, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC1.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+model2<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model2)
+model2<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model2)
+model2<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity + PC1.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model2)
+model2<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Social.Opportunity + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+tab_pgls(model2)
+
+#absolute brain size:
+model1<-pgls(log(Brain.Size) ~ PC1.Social.Opportunity + PC1.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+model2<-pgls(log(Brain.Size) ~ PC2.Social.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model2)
+model2<-pgls(log(Brain.Size) ~ PC1.Social.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model2)
+model2<-pgls(log(Brain.Size) ~ PC2.Social.Opportunity + PC1.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model2)
+model2<-pgls(log(Brain.Size) ~ PC1.Social.Opportunity + PC2.Social.Opportunity + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model2)
+
+#plot(ResBrainBody ~ PC1.Social.Opportunity, data1_PC_soc_eco, xlim=c(-20,35),xlab="Social opportunities - PC1")
+#abline(lm(ResBrainBody ~ PC1.Social.Opportunity, data1_PC_soc_eco))
+#text(data1_PC_soc_eco[,c("PC1.Social.Opportunity", "ResBrainBody")], labels=data1_PC_soc_eco[,"Genus_species"],pos=4, cex=0.5)
+
+
+@
+
+\newpage
+
+
+
+
+
+
+
+
+
+
+
+
+%%%-------------------------------------------
+%%%-------------------------------------------
+\section{Outcomes}
+\subsection{Social outcomes}
+%%%-------------------------------------------
+%%%-------------------------------------------
+
+
+\textbf{Coalitions definition Jaeggi and van Schaik 2011, Plavcan et al. 1995}
+\textbf{Social outcome for common sample}
+<<echo=F, fig=TRUE, results=tex>>=
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Soc2", colnames(data1))]
+variables1 <- variables[c(2,3,4,9)]
+
+data_mat <- data1[,c("Genus_species", variables1)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+colnames(dat)[grep("Soc2.Residuals.social.learning..Reader.et.al..2011.", colnames(dat))] <- "Social learning frequency"
+colnames(dat)[grep("Soc2.MM.and.FF.coalitions.combined", colnames(dat))] <- "Coalition formation"
+colnames(dat)[grep("Soc2.Social.hunting.combined", colnames(dat))] <- "Social hunting"
+colnames(dat)[grep("Soc2.Food.sharing.adults", colnames(dat))] <- "Food sharing among adults"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs_soc_outcome <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs_soc_outcome, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Social.Outcome"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Social.Outcome"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Social.Outcome"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+#absolute brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+plot(PC1.Social.Outcome ~ ResBrainBody, data1_PC, xlim=c(-1,1.1))
+abline(lm(PC1.Social.Outcome ~ ResBrainBody, data1_PC))
+text(data1_PC[,c("ResBrainBody", "PC1.Social.Outcome")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+
+@
+\newpage
+
+\textbf{Excluding outliers - Cebus capucinus, Cebus apella, Pan troglodytes}
+<<echo=F, fig=TRUE, results=tex>>=
+#add PCs to data set:
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data=data1_PC, na.action=na.exclude))
+
+data1_PC_wo_out <- data1_PC[ ! data1_PC$Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"), ]
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_wo_out, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Social.Outcome ~ log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolute brain size:
+model1<-pgls(PC1.Social.Outcome ~ log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+
+plot(PC1.Social.Outcome ~ ResBrainBody, data1_PC_wo_out, xlim=c(-1,1.1))
+abline(lm(PC1.Social.Outcome ~ ResBrainBody, data1_PC_wo_out))
+text(data1_PC_wo_out[,c("ResBrainBody", "PC1.Social.Outcome")], labels=data1_PC_wo_out[,"Genus_species"],pos=4, cex=0.5)
+
+@
+\newpage
+
+\textbf{Common sample with social \& ecological opportunities:}
+<<echo=F, fig=TRUE, results=tex>>=
+#common sample with social&ecologcial opportunities:
+colnames(PCs_soc_outcome) <- c("Genus_species", "PC1.Social.Outcome", "PC2.Social.Outcome", "PC3.Social.Outcome")
+data1_PC_combi <- merge(data1_PC_soc_eco, PCs_soc_outcome, by="Genus_species", all.x=T)
+data1_PC_combi <- data1_PC_combi[complete.cases(data1_PC_combi[,c("Genus_species","Brain.Size","PC1.Social.Opportunity", "PC1.Ecological.Opportunity" , "PC1.Social.Outcome")]),]
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_combi, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+
+#dat_gls <- data1_PC_combi
+#matches<-match(Petree$tip.label, dat_gls$Genus_species, nomatch=0)
+#not<-subset(Petree$tip.label, matches==0)
+#tree_pruned<-drop.tip(Petree, not)
+#rownames(dat_gls) <- dat_gls$Genus_species
+#model1 <- gls(PC1.Social.Outcome ~ log(Morph1.Body.mass.combined..g.) + log(Morph1.Brain.size.combined), correlation = corPagel(value=0.9, phy=tree_pruned), data=dat_gls)
+#tab_gls(model1)
+
+
+#relative brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+#absolute brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+
+plot(PC1.Social.Outcome ~ ResBrainBody, data1_PC_combi)
+abline(lm(PC1.Social.Outcome ~ ResBrainBody, data1_PC_combi))
+text(data1_PC_combi[,c("ResBrainBody", "PC1.Social.Outcome")], labels=data1_PC_combi[,"Genus_species"],pos=4, cex=0.5)
+@
+\newpage
+
+\textbf{Excluding outliers - Cebus capucinus, Cebus apella, Pan troglodytes}
+<<echo=F, fig=TRUE, results=tex>>=
+#add PCs to data set:
+data1_PC_combi$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data=data1_PC_combi, na.action=na.exclude))
+
+data1_PC_wo_out <- data1_PC_combi[ ! data1_PC_combi$Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"), ]
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_wo_out, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolute brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+
+
+plot(PC1.Social.Outcome ~ ResBrainBody, data1_PC_wo_out, xlim=c(-1,1.1))
+abline(lm(PC1.Social.Outcome ~ ResBrainBody, data1_PC_wo_out))
+text(data1_PC_wo_out[,c("ResBrainBody", "PC1.Social.Outcome")], labels=data1_PC_wo_out[,"Genus_species"],pos=4, cex=0.5)
+
+@
+\newpage
+
+
+\subsubsection{Including fission-fusion}
+<<echo=F, fig=TRUE, results=tex>>=
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Soc2", colnames(data1))]
+variables1 <- variables[c(1,2,3,4,9)]
+
+data_mat <- data1[,c("Genus_species", variables1)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+colnames(dat)[grep("Soc2.Residuals.social.learning..Reader.et.al..2011.", colnames(dat))] <- "Social learning frequency"
+colnames(dat)[grep("Soc2.MM.and.FF.coalitions.combined", colnames(dat))] <- "Coalition formation"
+colnames(dat)[grep("Soc2.Social.hunting.combined", colnames(dat))] <- "Social hunting"
+colnames(dat)[grep("Soc2.Food.sharing.adults", colnames(dat))] <- "Food sharing among adults"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Social.Outcome"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Social.Outcome"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Social.Outcome"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolute brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+plot(PC1.Social.Outcome ~ ResBrainBody, data1_PC, xlim=c(-1,1.1))
+abline(lm(PC1.Social.Outcome ~ ResBrainBody, data1_PC))
+text(data1_PC[,c("ResBrainBody", "PC1.Social.Outcome")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+
+@
+
+\newpage
+
+\subsubsection{Excluding hunting}
+<<echo=F, fig=TRUE, results=tex>>=
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Soc2", colnames(data1))]
+variables1 <- variables[c(2,3,9)]
+
+data_mat <- data1[,c("Genus_species", variables1)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+colnames(dat)[grep("Soc2.Residuals.social.learning..Reader.et.al..2011.", colnames(dat))] <- "Social learning frequency"
+colnames(dat)[grep("Soc2.MM.and.FF.coalitions.combined", colnames(dat))] <- "Coalition formation"
+colnames(dat)[grep("Soc2.Social.hunting.combined", colnames(dat))] <- "Social hunting"
+colnames(dat)[grep("Soc2.Food.sharing.adults", colnames(dat))] <- "Food sharing among adults"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Social.Outcome"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Social.Outcome"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Social.Outcome"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolute brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+plot(PC1.Social.Outcome ~ ResBrainBody, data1_PC, xlim=c(-1,1.1))
+abline(lm(PC1.Social.Outcome ~ ResBrainBody, data1_PC))
+text(data1_PC[,c("ResBrainBody", "PC1.Social.Outcome")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+@
+
+\newpage
+
+\subsubsection{Including vocal. terr. adv.}
+<<echo=F, fig=TRUE, results=tex>>=
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Soc2|Vocal", colnames(data1))]
+variables1 <- variables[c(1,3,4,5,10)]
+
+data_mat <- data1[,c("Genus_species", variables1)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+colnames(dat)[grep("Soc2.Residuals.social.learning..Reader.et.al..2011.", colnames(dat))] <- "Social learning frequency"
+colnames(dat)[grep("Soc2.MM.and.FF.coalitions.combined", colnames(dat))] <- "Coalition formation"
+colnames(dat)[grep("Soc2.Social.hunting.combined", colnames(dat))] <- "Social hunting"
+colnames(dat)[grep("Soc2.Food.sharing.adults", colnames(dat))] <- "Food sharing among adults"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Social.Outcome"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Social.Outcome"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Social.Outcome"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+#absolute brain size:
+model1<-pgls(PC1.Social.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+plot(PC1.Social.Outcome ~ ResBrainBody, data1_PC, xlim=c(-1,1.1))
+abline(lm(PC1.Social.Outcome ~ ResBrainBody, data1_PC))
+text(data1_PC[,c("ResBrainBody", "PC1.Social.Outcome")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+
+@
+\newpage
+
+
+%%%-------------------------------------------
+%%%-------------------------------------------
+\subsection{Ecological outcomes}
+%%%-------------------------------------------
+%%%-------------------------------------------
+
+\textbf{Ecological outcome for common sample}
+<<echo=F, fig=TRUE, results=tex>>=
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Eco2", colnames(data1))]
+variables1 <- variables[c(1:5)]
+
+data_mat <- data1[,c("Genus_species", variables1)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+colnames(dat)[grep("Eco2.Cognitive.Buffer.NDVI..Janneke.Karin.data.final.", colnames(dat))] <- "Degree of buffering env. seasonality"
+colnames(dat)[grep("Eco2.Diet.breadth.combined", colnames(dat))] <- "Diet breadth"
+colnames(dat)[grep("Eco2.Hunting.combined", colnames(dat))] <- "Hunting"
+colnames(dat)[grep("Eco2.Tool.use..Bentley.Condit.and.Smith.2010.", colnames(dat))] <- "Tool use"
+colnames(dat)[grep("Eco2.Residuals.innovation..Reader.et.al..2011.", colnames(dat))] <- "Innovation frequency"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs_eco_outcome <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs_eco_outcome, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Ecological.Outcome"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Ecological.Outcome"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Ecological.Outcome"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+#absolute brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+
+plot(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC, xlim=c(-1,1.3))
+abline(lm(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC))
+text(data1_PC[,c("ResBrainBody", "PC1.Ecological.Outcome")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+@
+\newpage
+
+\textbf{Excluding outliers - Cebus capucinus, Cebus apella, Pan troglodytes}
+<<echo=F, fig=TRUE, results=tex>>=
+#add PCs to data set:
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data=data1_PC, na.action=na.exclude))
+
+data1_PC_wo_out <- data1_PC[ ! data1_PC$Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"), ]
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_wo_out, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+#absolute brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+plot(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC_wo_out, xlim=c(-1,1.1))
+abline(lm(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC_wo_out))
+text(data1_PC_wo_out[,c("ResBrainBody", "PC1.Ecological.Outcome")], labels=data1_PC_wo_out[,"Genus_species"],pos=4, cex=0.5)
+
+@
+\newpage
+
+\textbf{Common sample with social \& ecological opportunities:}
+<<echo=F, fig=TRUE, results=tex>>=
+#common sample with social&ecologcial opportunities:
+colnames(PCs_eco_outcome) <- c("Genus_species", "PC1.Ecological.Outcome", "PC2.Ecological.Outcome", "PC1.Ecological.Outcome")
+data1_PC_combi <- merge(data1_PC_soc_eco, PCs_eco_outcome, by="Genus_species", all.x=T)
+data1_PC_combi <- data1_PC_combi[complete.cases(data1_PC_combi[,c("Genus_species","Brain.Size","PC1.Social.Opportunity", "PC1.Ecological.Opportunity" , "PC1.Ecological.Outcome")]),]
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_combi, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolute brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+plot(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC_combi, xlim=c(-1,1))
+abline(lm(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC_combi))
+text(data1_PC_combi[,c("ResBrainBody", "PC1.Ecological.Outcome")], labels=data1_PC_combi[,"Genus_species"],pos=4, cex=0.5)
+@
+\newpage
+
+\textbf{Excluding outliers - Cebus capucinus, Cebus apella, Pan troglodytes}
+<<echo=F, fig=TRUE, results=tex>>=
+#add PCs to data set:
+data1_PC_combi$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data=data1_PC_combi, na.action=na.exclude))
+
+data1_PC_wo_out <- data1_PC_combi[ ! data1_PC_combi$Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"), ]
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_wo_out, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolute brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+plot(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC_wo_out, xlim=c(-1,1.1))
+abline(lm(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC_wo_out))
+text(data1_PC_wo_out[,c("ResBrainBody", "PC1.Ecological.Outcome")], labels=data1_PC_wo_out[,"Genus_species"],pos=4, cex=0.5)
+
+@
+\newpage
+
+
+\subsubsection{Including extractive foraging}
+<<echo=F, fig=TRUE, results=tex>>=
+variables <- names(data1)[grep("Eco1|Eco2", colnames(data1))]
+variables1 <- variables[c(11,17:21)]
+
+data_mat <- data1[,c("Genus_species", variables1)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+colnames(dat)[grep("Eco2.Cognitive.Buffer.NDVI..Janneke.Karin.data.final.", colnames(dat))] <- "Degree of buffering env. seasonality"
+colnames(dat)[grep("Eco2.Diet.breadth.combined", colnames(dat))] <- "Diet breadth"
+colnames(dat)[grep("Eco2.Hunting.combined", colnames(dat))] <- "Hunting"
+colnames(dat)[grep("Eco2.Tool.use..Bentley.Condit.and.Smith.2010.", colnames(dat))] <- "Tool use"
+colnames(dat)[grep("Eco2.Residuals.innovation..Reader.et.al..2011.", colnames(dat))] <- "Innovation frequency"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Ecological.Outcome"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Ecological.Outcome"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Ecological.Outcome"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolute brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+
+plot(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC, xlim=c(-1,1.3))
+abline(lm(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC))
+text(data1_PC[,c("ResBrainBody", "PC1.Ecological.Outcome")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+@
+
+
+\newpage
+
+\subsubsection{Excluding hunting}
+<<echo=F, fig=TRUE, results=tex>>=
+#choose variables to perform pPCA on:
+variables <- names(data1)[grep("Eco2", colnames(data1))]
+variables1 <- variables[c(1:2,4:5)]
+
+data_mat <- data1[,c("Genus_species", variables1)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+colnames(dat)[grep("Eco2.Cognitive.Buffer.NDVI..Janneke.Karin.data.final.", colnames(dat))] <- "Degree of buffering env. seasonality"
+colnames(dat)[grep("Eco2.Diet.breadth.combined", colnames(dat))] <- "Diet breadth"
+colnames(dat)[grep("Eco2.Hunting.combined", colnames(dat))] <- "Hunting"
+colnames(dat)[grep("Eco2.Tool.use..Bentley.Condit.and.Smith.2010.", colnames(dat))] <- "Tool use"
+colnames(dat)[grep("Eco2.Residuals.innovation..Reader.et.al..2011.", colnames(dat))] <- "Innovation frequency"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-1], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.Ecological.Outcome"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.Ecological.Outcome"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.Ecological.Outcome"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(PC2.Ecological.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+#absolute brain size:
+model1<-pgls(PC1.Ecological.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+model1<-pgls(PC2.Ecological.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+
+plot(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC, xlim=c(-1,1.3))
+abline(lm(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC))
+text(data1_PC[,c("ResBrainBody", "PC1.Ecological.Outcome")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+@
+
+
+\newpage
+
+%%%--------------------------------------------------
+%%%--------------------------------------------------
+\subsection{Social and ecological outcomes - common sample}
+%%%--------------------------------------------------
+%%%--------------------------------------------------
+
+<<echo=F, results=tex, fig=TRUE>>=
+colnames(PCs_soc_outcome) <- c("Genus_species", "PC1.Social.Outcome", "PC2.Social.Outcome", "PC3.Social.Outcome")
+colnames(PCs_eco_outcome) <- c("Genus_species", "PC1.Ecological.Outcome", "PC2.Ecological.Outcome", "PC3.Ecological.Outcome")
+data1_PC_social_outcome <- merge(data1, PCs_soc_outcome, by="Genus_species", all.x=T)
+data1_PC_soc_eco_outcome <- merge(data1_PC_social_outcome, PCs_eco_outcome, by="Genus_species", all.x=T)
+colnames(data1_PC_soc_eco_outcome)[grep("Morph1.Brain.size.combined", colnames(data1_PC_soc_eco_outcome))] <- "Brain.Size"
+colnames(data1_PC_soc_eco_outcome)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC_soc_eco_outcome))] <- "Body.Mass"
+data1_PC_soc_eco_outcome <- data1_PC_soc_eco_outcome[complete.cases(data1_PC_soc_eco_outcome[,c("Genus_species", "Brain.Size","PC1.Social.Outcome", "PC1.Ecological.Outcome")]),]
+
+data1_PC_soc_eco_outcome$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data=data1_PC_soc_eco_outcome, na.action=na.exclude))
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_soc_eco_outcome, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+model1<-pgls(PC1.Social.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML') 
+tab_pgls(model1)
+
+model1<-pgls(PC1.Ecological.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML') 
+tab_pgls(model1)
+
+model1<-pgls(PC1.Social.Outcome ~  PC1.Ecological.Outcome, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+
+
+par(mfrow=c(1,2))
+plot(PC1.Social.Outcome ~ ResBrainBody, data1_PC_soc_eco_outcome, xlim=c(-1,1.1))
+abline(lm(PC1.Social.Outcome ~ ResBrainBody, data1_PC_soc_eco_outcome))
+text(data1_PC_soc_eco_outcome[,c("ResBrainBody", "PC1.Social.Outcome")], labels=data1_PC_soc_eco_outcome[,"Genus_species"],pos=4, cex=0.5)
+
+plot(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC_soc_eco_outcome, xlim=c(-1,1.1))
+abline(lm(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC_soc_eco_outcome))
+text(data1_PC_soc_eco_outcome[,c("ResBrainBody", "PC1.Ecological.Outcome")], labels=data1_PC_soc_eco_outcome[,"Genus_species"],pos=4, cex=0.5)
+par(mfrow=c(1,1))
+
+par(mfrow=c(1,1))
+plot(PC1.Social.Outcome ~ PC1.Ecological.Outcome, data1_PC_soc_eco_outcome, ylab="PC1 Social opportunities", xlab="PC1 Innovativeness", pch=16)
+abline(lm(PC1.Social.Outcome ~ PC1.Ecological.Outcome, data1_PC_soc_eco_outcome), col="darkgrey", lwd=2)
+
+
+
+dat_brain <- read.table("brain_body_primates.txt", header=T, sep="\t")
+par(mfrow=c(1,1))
+Chir <- dat_brain[dat_brain[,"Infraorder"]=="Chiromyiformes", ]
+Lem <- dat_brain[dat_brain[,"Infraorder"]=="Lemuriformes", ]
+Lor <- dat_brain[dat_brain[,"Infraorder"]=="Lorisiformes", ]
+Simi <- dat_brain[dat_brain[,"Infraorder"]=="Simiiformes", ]
+Tars <- dat_brain[dat_brain[,"Infraorder"]=="Tarsiiformes", ]
+
+plot(log(dim.Brain.Mass) ~ log(dim.Body.mass), data=Chir, xlim=c(3,12),ylim=c(0,6.5), col="grey", pch=16, xlab="Ln Body mass [g]", ylab="Ln Brain mass [g]")
+points(log(dim.Brain.Mass) ~ log(dim.Body.mass), data=Lem, xlim=c(3,12), col="darkblue", pch=16, add=T)
+points(log(dim.Brain.Mass) ~ log(dim.Body.mass), data=Lor, xlim=c(3,12), col="darkred", pch=16, add=T)
+points(log(dim.Brain.Mass) ~ log(dim.Body.mass), data=Simi, xlim=c(3,12), col="darkgreen", pch=16, add=T)
+points(log(dim.Brain.Mass) ~ log(dim.Body.mass), data=Tars, xlim=c(3,12), col="darkgoldenrod2", pch=16, add=T)
+@
+
+\newpage
+
+\textbf{Exclude outliers: Cebus capucinus, Cebus apella, Pan troglodytes}
+<<echo=F, results=tex, fig=TRUE>>=
+data1_PC_wo_out <- data1_PC_soc_eco_outcome[ ! data1_PC_soc_eco_outcome$Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"), ]
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_wo_out, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+model1<-pgls(PC1.Social.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML') 
+tab_pgls(model1)
+
+#relative brain size
+model1<-pgls(PC1.Ecological.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML') 
+tab_pgls(model1)
+
+#absolute brain size
+model1<-pgls(PC1.Ecological.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML') 
+tab_pgls(model1)
+
+
+par(mfrow=c(1,2))
+plot(PC1.Social.Outcome ~ ResBrainBody, data1_PC_wo_out, xlim=c(-1,1.1))
+abline(lm(PC1.Social.Outcome ~ ResBrainBody, data1_PC_wo_out))
+text(data1_PC_wo_out[,c("ResBrainBody", "PC1.Social.Outcome")], labels=data1_PC_wo_out[,"Genus_species"],pos=4, cex=0.5)
+
+plot(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC_wo_out, xlim=c(-1,1.1))
+abline(lm(PC1.Ecological.Outcome ~ ResBrainBody, data1_PC_wo_out))
+text(data1_PC_wo_out[,c("ResBrainBody", "PC1.Ecological.Outcome")], labels=data1_PC_wo_out[,"Genus_species"],pos=4, cex=0.5)
+par(mfrow=c(1,1))
+@
+
+\newpage
+
+<<echo=F, results=tex, fig=TRUE>>=
+#are the outcomes of the social and ecological domain interrelated?
+model3<-pgls(PC1.Ecological.Outcome ~ PC1.Social.Outcome, data = comp_data, lambda='ML') 
+tab_pgls(model3)
+
+
+plot(PC1.Ecological.Outcome ~ PC1.Social.Outcome, data1_PC_soc_eco_outcome, xlim=c(-7,25))
+abline(lm(PC1.Ecological.Outcome ~ PC1.Social.Outcome, data1_PC_soc_eco_outcome))
+text(data1_PC_soc_eco_outcome[,c("PC1.Social.Outcome", "PC1.Ecological.Outcome")], labels=data1_PC_soc_eco_outcome[,"Genus_species"],pos=4, cex=0.5)
+
+@
+\newpage
+
+\textbf{Exclude outliers: Cebus capucinus, Cebus apella, Pan troglodytes}
+<<echo=F, results=tex, fig=TRUE>>=
+#excluding outliers:
+data1_PC_soc_eco_outcome_wo_out <- data1_PC_soc_eco_outcome[ ! data1_PC_soc_eco_outcome$Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"), ]
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_soc_eco_outcome_wo_out, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+model3<-pgls(PC1.Ecological.Outcome ~ PC1.Social.Outcome, data = comp_data, lambda='ML') 
+tab_pgls(model3)
+
+plot(PC1.Ecological.Outcome ~ PC1.Social.Outcome, data1_PC_soc_eco_outcome_wo_out, xlim=c(-7,25))
+abline(lm(PC1.Ecological.Outcome ~ PC1.Social.Outcome, data1_PC_soc_eco_outcome_wo_out))
+text(data1_PC_soc_eco_outcome_wo_out[,c("PC1.Social.Outcome", "PC1.Ecological.Outcome")], labels=data1_PC_soc_eco_outcome_wo_out[,"Genus_species"],pos=4, cex=0.5)
+@
+\newpage
+
+
+
+
+%%%-------------------------------------------------------------------
+%%%-------------------------------------------------------------------
+\section{Social and ecological opportunities/outcomes - common sample}
+%%%-------------------------------------------------------------------
+%%%-------------------------------------------------------------------
+
+<<echo=F, results=tex>>=
+data1_PC_soc_eco_outcome_s <- data1_PC_soc_eco_outcome[,c("Genus_species","PC1.Social.Outcome", "PC2.Social.Outcome", "PC3.Social.Outcome", "PC1.Ecological.Outcome", "PC2.Ecological.Outcome", "PC3.Ecological.Outcome")]
+data1_PC_soc_eco_opp_out <- merge(data1_PC_soc_eco, data1_PC_soc_eco_outcome_s, by="Genus_species", all.x=T)
+
+
+data1_PC_soc_eco_opp_out <- data1_PC_soc_eco_opp_out[complete.cases(data1_PC_soc_eco_opp_out[,c("Genus_species", "Brain.Size","PC1.Social.Opportunity","PC1.Ecological.Opportunity","PC1.Social.Outcome", "PC1.Ecological.Outcome")]),]
+rownames(data1_PC_soc_eco_opp_out) <- data1_PC_soc_eco_opp_out$Genus_species
+matches <- match(Petree$tip.label, data1_PC_soc_eco_opp_out$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC_soc_eco_opp_out, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+#model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC3.Social.Opportunity, data = comp_data, lambda='ML') 
+#tab_pgls(model1)
+
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+#model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC3.Ecological.Opportunity, data = comp_data, lambda='ML') 
+#tab_pgls(model1)
+
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC1.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Social.Opportunity + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+
+
+#absolute brain size:
+model1<-pgls(log(Brain.Size) ~ PC1.Social.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~ PC2.Social.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+#model1<-pgls(log(Brain.Size) ~ PC3.Social.Opportunity, data = comp_data, lambda='ML') 
+#tab_pgls(model1)
+
+model1<-pgls(log(Brain.Size) ~   PC1.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~   PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+#model1<-pgls(log(Brain.Size) ~   PC3.Ecological.Opportunity, data = comp_data, lambda='ML') 
+#tab_pgls(model1)
+
+model1<-pgls(log(Brain.Size) ~   PC1.Social.Opportunity + PC1.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~   PC2.Social.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+model1<-pgls(log(Brain.Size) ~   PC1.Social.Opportunity + PC2.Social.Opportunity + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML') 
+tab_pgls(model1)
+
+
+#rownames(data1_PC_soc_eco_opp_out) <- data1_PC_soc_eco_opp_out$Genus_species
+#model1 <- gls(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.) + PC1.x, correlation = corPagel(value=0.9, phy=tree_pruned), data=data1_PC_soc_eco_opp_out)
+#tab_gls(model1)
+#model1 <- gls(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.) + PC2.x, correlation = corPagel(value=0.9, phy=tree_pruned), data=data1_PC_soc_eco_opp_out)
+#tab_gls(model1)
+#model1 <- gls(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.) + PC3.x, correlation = corPagel(value=0.9, phy=tree_pruned), data=data1_PC_soc_eco_opp_out)
+#tab_gls(model1)
+
+#model1 <- gls(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.) + PC1.y, correlation = corPagel(value=0.9, phy=tree_pruned), data=data1_PC_soc_eco_opp_out)
+#tab_gls(model1)
+#model1 <- gls(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.) + PC2.y, correlation = corPagel(value=0.9, phy=tree_pruned), data=data1_PC_soc_eco_opp_out)
+#tab_gls(model1)
+#model1 <- gls(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.) + PC3.y, correlation = corPagel(value=0.9, phy=tree_pruned), data=data1_PC_soc_eco_opp_out)
+#tab_gls(model1)
+
+#model1 <- gls(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.) + PC1.x + PC1.y, correlation = corPagel(value=0.9, phy=tree_pruned), data=data1_PC_soc_eco_opp_out)
+#tab_gls(model1)
+#model1 <- gls(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.) + PC2.x + PC2.y, correlation = corPagel(value=0.9, phy=tree_pruned), data=data1_PC_soc_eco_opp_out)
+#tab_gls(model1)
+#model1 <- gls(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.) + PC3.x + PC3.y, correlation = corPagel(value=0.9, phy=tree_pruned), data=data1_PC_soc_eco_opp_out)
+#tab_gls(model1)
+#model1 <- gls(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.) + PC1.x + PC1.y + PC2.x + PC2.y, correlation = corPagel(value=0.9, phy=tree_pruned), data=data1_PC_soc_eco_opp_out)
+#tab_gls(model1)
+
+
+@
+
+\newpage
+
+%%%--------------------------------------------------
+%%%--------------------------------------------------
+\section{Social and ecological outcomes - single pPCA}
+%%%--------------------------------------------------
+%%%--------------------------------------------------
+There are several reasons why we do not put them into the same pot. Extremely reduced sample size, in which social hunting shows then to less variation which does not allow for pPCA to run!
+<<echo=F, results=tex>>=
+#choose variables to perform pPCA on:
+variables_soc <- names(data1)[grep("Soc2", colnames(data1))]
+variables1_soc <- variables_soc[c(2,3,4,9)]
+
+variables_eco <- names(data1)[grep("Eco2", colnames(data1))]
+variables1_eco <- variables_eco[c(1:5)]
+
+data_mat <- data1[,c("Genus_species", variables1_soc, variables1_eco)]
+dat <- droplevels(data_mat[complete.cases(data_mat),]); #str(dat)
+dat[,-1] <- apply(dat[,-1],2, function(x){ as.numeric(as.character(x)) }  )
+matches <- match(Petree$tip.label, dat$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned <- drop.tip(Petree, not)
+
+
+colnames(dat)[grep("Soc2.Residuals.social.learning..Reader.et.al..2011.", colnames(dat))] <- "Social learning frequency"
+colnames(dat)[grep("Soc2.MM.and.FF.coalitions.combined", colnames(dat))] <- "Coalition formation"
+colnames(dat)[grep("Soc2.Social.hunting.combined", colnames(dat))] <- "Social hunting"
+colnames(dat)[grep("Soc2.Food.sharing.adults", colnames(dat))] <- "Food sharing among adults"
+
+colnames(dat)[grep("Eco2.Cognitive.Buffer.NDVI..Janneke.Karin.data.final.", colnames(dat))] <- "Degree of buffering env. seasonality"
+colnames(dat)[grep("Eco2.Diet.breadth.combined", colnames(dat))] <- "Diet breadth"
+colnames(dat)[grep("Eco2.Hunting.combined", colnames(dat))] <- "Hunting"
+colnames(dat)[grep("Eco2.Tool.use..Bentley.Condit.and.Smith.2010.", colnames(dat))] <- "Tool use"
+colnames(dat)[grep("Eco2.Residuals.innovation..Reader.et.al..2011.", colnames(dat))] <- "Innovation frequency"
+
+#phylo PCA:
+rownames(dat) <- dat$Genus_species
+res <- phyl.pca(tree_pruned, dat[,-c(1,4)], method="lambda", mode="corr")
+#summary(res); res$L; paste("lambda=", res$lambda); length(dat$Genus_species)
+tab <- rbind(res$L,  diag(res$Eval), summary(res)$importance[3,]  )
+#rownames(tab) <- c(substr(rownames(res$L),6,25), "Eigenvalues", "Cumulative Proportion")
+rownames(tab) <- c(rownames(res$L), "Eigenvalues", "Cumulative Proportion")
+print(xtable(tab, digits=4, size="\\tiny", caption=paste("pPCA: N=", length(dat$Genus_species), "; lambda=", round(res$lambda, digits=2))), caption.placement="top" , table.placement="H")
+
+
+#add PCs to data set:
+PCs <- data.frame(Genus_species=dat$Genus_species, res$S[,1:3])
+data1_PC <- merge(data1, PCs, by="Genus_species", all.x=T)
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Morph1.Brain.size.combined) ~ log(Morph1.Body.mass.combined..g.), data=data1_PC, na.action=na.exclude))
+
+
+colnames(data1_PC)[grep("Morph1.Brain.size.combined", colnames(data1_PC))] <- "Brain.Size"
+colnames(data1_PC)[grep("Morph1.Body.mass.combined..g.", colnames(data1_PC))] <- "Body.Mass"
+colnames(data1_PC)[grep("PC1", colnames(data1_PC))] <- "PC1.SocEco.Outcome"
+colnames(data1_PC)[grep("PC2", colnames(data1_PC))] <- "PC2.SocEco.Outcome"
+colnames(data1_PC)[grep("PC3", colnames(data1_PC))] <- "PC3.SocEco.Outcome"
+
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+#relative brain size:
+model1<-pgls(PC1.SocEco.Outcome ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+#absolute brain size:
+model1<-pgls(PC1.SocEco.Outcome ~  log(Brain.Size), data = comp_data, lambda='ML')
+tab_pgls(model1)
+
+plot(PC1.SocEco.Outcome ~ ResBrainBody, data1_PC, xlim=c(-1,1.1))
+abline(lm(PC1.SocEco.Outcome ~ ResBrainBody, data1_PC))
+text(data1_PC[,c("ResBrainBody", "PC1.SocEco.Outcome")], labels=data1_PC[,"Genus_species"],pos=4, cex=0.5)
+@
+
+
+\end{document}
