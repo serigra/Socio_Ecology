@@ -1,0 +1,476 @@
+---
+title: "Socio Ecology in primates - main analyses"
+author: "Sereina Graber"
+date: "24/07/2020"
+output:
+  html_document:
+    number_sections: true
+    toc: true
+    toc_float: true
+    theme: lumen
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+# packages
+library(tidyverse)
+library(magrittr)
+library(patchwork)
+library(data.table)
+library(knitr)
+library(kableExtra)
+
+library(caper)
+library(nlme)
+library(ape)
+library(phytools)
+library(MCMCglmm)
+
+
+# load functions
+source('00_socio_ecology_functions.R')
+source('~/Documents/R/helper_functions_sereina.R')
+```
+
+
+```{r}
+# data preparation
+source('01_socio_ecology_data_prep.R')
+
+# rename variables (function in 00_socio_ecology_functions.R)
+data1 <- rename_vars(dat = data1)
+```
+
+<br><br><br><br>
+
+# Social opportunities
+## Phylogenetic PCA
+```{r, results='hide'}
+
+# choose variables to perform pPCA on:
+variables <- c('Home range overlap', 'Vocal terr. advertisement',
+                'Group size', 'Gregariousness', 'Fission-fusion',
+                'Body size dimorphism', 'Visual trait dimorphism',
+                'Cooperative breeding', 'Dispersal', 'Social system',
+                'Mating system')
+
+# Phylogenetic PCA (function in 00_socio_ecology_functions.R)
+pca.soc.opp <- phylo_pca(vars = variables, 
+                         data = data1, 
+                         tree = Petree, 
+                         type = 'Social Opportunity')
+```
+
+```{r}
+# output table PCA
+kable_phylo_pca_loadings(pca.soc.opp$PC.loadings)
+```
+
+
+## PGLS with PC scores
+```{r}
+# add individual PC scores to data set
+data1_soc_opp <- merge(data1, pca.soc.opp$PC.scores, by = "Genus_species", all.x = T)
+# add residuals to data set for plotting
+data1_soc_opp$ResBrainBody <- resid(m1 <- lm(log(Brain.Size) ~ log(Body.Mass), data = data1_soc_opp, na.action = na.exclude))
+
+# comparative data for PGLS
+comp_data <- comparative.data(phy = Petree, data = data1_soc_opp, names.col = Genus_species, 
+                              vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim = 3)
+
+# PGLS analyses
+model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity, data = comp_data, lambda = 'ML')
+kable_pgls(model1)
+model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity, data = comp_data, lambda = 'ML')
+kable_pgls(model1)
+model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Social.Opportunity, data = comp_data, lambda = 'ML')
+kable_pgls(model1)
+
+```
+
+
+## PGLS with pPCAs where systematically each of the variables is left out 
+
+```{r, results = 'hide'}
+tab.leave.one.out <- leave_one_out(vars = variables, 
+                                     data = data1, 
+                                     tree = Petree,
+                                     type = 'Social Opportunity')
+```
+
+```{r}
+tab.leave.one.out %>% 
+  round(., digits = 4) %>% 
+  kable_helsana(., caption = 'Estimates and p-values of the effects of PC1 and PC2 of the social opportunities on relative brain size  (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
+```
+
+
+<br><br><br><br>
+
+# Ecological opportunities
+## Phylogenetic PCA
+```{r, results='hide'}
+
+# choose variables to perform pPCA on:
+variables <- c('Predation risk', 'Mobility D-index', 'Env. seasonality',
+               '% insects and meat in diet', '% fruits and seeds in diet', '% leaves in diet', 
+               'Extractive foraging', 'Diet quality', 'Substrate', 'Activity', 'Habitat')
+
+# Phylogenetic PCA (function in 00_socio_ecology_functions.R)
+pca.eco.opp <- phylo_pca(vars = variables, 
+                         data = data1, 
+                         tree = Petree, 
+                         type = 'Ecological Opportunity')
+```
+
+```{r}
+# output table PCA
+kable_phylo_pca_loadings(pca.eco.opp$PC.loadings)
+```
+
+
+## PGLS with PC scores
+```{r}
+# add individual PC scores to data set
+data1_eco_opp <- merge(data1, pca.eco.opp$PC.scores, by = "Genus_species", all.x = T)
+# add residuals to data set for plotting
+data1_eco_opp$ResBrainBody <- resid(m1 <- lm(log(Brain.Size) ~ log(Body.Mass), data = data1_eco_opp, na.action = na.exclude))
+
+# comparative data for PGLS
+comp_data <- comparative.data(phy = Petree, data = data1_eco_opp, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim = 3)
+
+# PGLS analyses
+model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity, data = comp_data, lambda = 'ML')
+kable_pgls(model1)
+model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Ecological.Opportunity, data = comp_data, lambda = 'ML')
+kable_pgls(model1)
+model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
+kable_pgls(model1)
+
+```
+
+## PGLS with pPCAs where systematically each of the variables is left out 
+
+```{r, results = 'hide'}
+tab.leave.one.out <- leave_one_out(vars = variables, data = data1, tree = Petree, type = 'Ecological Opportunity')
+```
+
+```{r}
+tab.leave.one.out %>% 
+  round(., digits = 4) %>% 
+  kable_helsana(., caption = 'Estimates and p-values of the effects of PC1 and PC2 of the ecological opportunities on relative brain size  (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
+```
+
+<br><br><br><br>
+
+
+# Social and Ecological Opportunities - common sample
+
+```{r common sample}
+# Merge social and ecological PCs to data
+data1_soc_eco_opp <- 
+  data1 %>% 
+    left_join(pca.soc.opp$PC.scores, by = 'Genus_species') %>% 
+    left_join(pca.eco.opp$PC.scores, by = 'Genus_species') %>% 
+    dplyr::select('Genus_species', 'Body.Mass', 'Brain.Size', dplyr::matches('PC1|PC2')) %>% 
+    filter(complete.cases(.))
+
+# add residuals for plotting
+data1_soc_eco_opp$ResBrainBody <- resid(m1 <- lm(log(Brain.Size) ~ log(Body.Mass), 
+                                                 data = data1_soc_eco_opp, 
+                                                 na.action = na.exclude)
+                                        )
+# comparative data
+comp_data <- comparative.data(phy = Petree, data = data1_soc_eco_opp, 
+                              names.col = Genus_species, vcv = TRUE, 
+                              na.omit = FALSE, warn.dropped = TRUE , vcv.dim = 3)
+
+
+# match tree and data
+matches <- match(Petree$tip.label, data1_soc_eco_opp$Genus_species, nomatch = 0)
+not <- subset(Petree$tip.label, matches == 0)
+tree_pruned_soc_eco_opp <- drop.tip(Petree, not)
+```
+
+```{r jackknife}
+# jaccknife resampling
+set.seed(123)
+boot_res <- boots_pgls(n_iter = 1000, 
+                       subsample_size = 0.8, 
+                       data = data1_soc_eco_opp, 
+                       response = "log(Brain.Size)", 
+                       predictors = c("PC1.Social.Opportunity", "PC2.Social.Opportunity",
+                                      "PC1.Ecological.Opportunity", "PC2.Ecological.Opportunity"), 
+                       opp = TRUE)
+
+
+# make nice output table
+boot_res$Bootstrap.Summary %>% 
+  # round(., digits = 4) %>% 
+  kable_helsana(., caption = paste0('Jackknife resampling (over tips) of PGLS regression model including all four opportunity PCs: $N_{iter}$ = ', nrow(boot_res$Bootstrap.Estimates), ', subsample size = ', boot_res$Bootsrap.Subsample, ' (80% of N = 43). Given are the original estimates and corresponding p-values from the original PGLS regression as well as the mean estimates and 95% confidence intervals (CI) of the jackknifed sample.'))
+```
+
+```{r jackknife distribution plot, fig.width = 9, fig.height = 4.5}
+
+dat <- boot_res$Bootstrap.Estimates
+dat <- as.data.frame(dat[!dat[,1] == 999, ])
+
+theme_density <- theme(
+        axis.title = element_text(size = 13, color = "black"),
+        axis.text.x  = element_text(vjust = 0.5, size = 12),
+        axis.text.y = element_text(vjust = 0.5, size = 13),
+        panel.border = element_rect(fill = NA, size = 2),
+        #plot.title = element_text(size = 20),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        legend.position = c(0.78, 0.7),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 11))
+
+# PC1
+p.pc1 <- ggplot(data = dat) +
+  geom_density(aes(x = PC1.Ecological.Opportunity, fill = 'ecological opp.'),  alpha = 0.5) +
+  geom_density(aes(x = PC1.Social.Opportunity, fill = 'social opp.'), alpha = 0.5) +
+  scale_fill_manual( values = c("olivedrab4","steelblue3")) +
+  theme_density +
+  labs(x = 'Estimates PC1')
+
+# PC2 
+p.pc2 <- ggplot(data = dat) +
+  geom_density(aes(x = PC2.Ecological.Opportunity, fill = "ecological opp."), alpha = 0.5) +
+  geom_density(aes(x = PC2.Social.Opportunity, fill = "social opp."), alpha = 0.5) +
+  scale_fill_manual( values = c("olivedrab4","steelblue3")) +
+  theme_density +
+  labs(x = 'Estimates PC2')
+
+p.pc1 + p.pc2 + 
+  plot_annotation(title = '1000 Jackknife replicates of combined plgs model', tag_levels = 'A') &
+  theme(plot.title = element_text(size = 16), 
+        plot.tag = element_text(size = 14))
+```
+
+```{r AIC model comparison I, results = 'hide'}
+
+formulas <- c('log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Social.Opportunity',
+              'log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity',
+              'log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC1.Ecological.Opportunity',
+              'log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity + PC2.Ecological.Opportunity',
+              'log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Ecological.Opportunity',
+              'log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity + PC1.Ecological.Opportunity',
+              'log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity + PC1.Social.Opportunity + PC2.Social.Opportunity')
+
+# run pgls and extract esimates/p-values for each formula from above
+tab_estimates <- do.call('rbind', 
+                         lapply(formulas, function(x) extract_estimates(x, 
+                                                                     data = data1_soc_eco_opp, 
+                                                                     tree_pruned = tree_pruned_soc_eco_opp))
+                         )
+```
+
+```{r AIC model comparison II}
+# restructure table
+tab_estimates %<>% 
+  mutate(value = paste0(round(estimate, 3), ' (', round(`p-value`, 3), ')')) %>% 
+  dplyr::select(variable, AIC, value) %>% 
+  pivot_wider(names_from = variable, values_from = c(value)) %>% 
+  mutate(model = paste0('model ', row_number())) %>% 
+  dplyr::select(model, everything()) %>% 
+  # no AIC for mcmcglmm, take old value from pgls anlysis from thesis where pgls() gave no error back then !!
+  mutate(AIC = replace(AIC, model == 'model 6', -30.66)) %>% 
+  replace(is.na(.), '-')
+
+# rename colnames, to make them shorter
+colnames(tab_estimates) <- gsub('Opportunity', 'Opp.', colnames(tab_estimates))
+  
+# nice output table
+tab_estimates %>% 
+  kable_helsana(., caption = paste0('Model selection based on Akaike Information Criterion (AIC). PGLS models with log brain size as the response and the social and ecological opportunity PCs as predictor variables. Models are based on the common sample of social and ecological opportunities (', nrow(data1_soc_eco_opp)  ,') and include log body mass as a covariate. Given are the estimates and corresponding p-values in brackets.'))
+```
+
+
+# Relationship between social and ecological opportunities
+```{r relationship social and ecological opps}
+
+formulas_rel <- c('PC1.Social.Opportunity ~ PC1.Ecological.Opportunity',
+              'PC2.Social.Opportunity ~ PC2.Ecological.Opportunity',
+              'PC1.Social.Opportunity ~ PC2.Ecological.Opportunity',
+              'PC2.Social.Opportunity ~ PC1.Ecological.Opportunity',
+              'PC1.Ecological.Opportunity ~ PC1.Social.Opportunity',
+              'PC2.Ecological.Opportunity ~ PC2.Social.Opportunity',
+              'PC2.Ecological.Opportunity ~ PC1.Social.Opportunity', 
+              'PC1.Ecological.Opportunity ~ PC2.Social.Opportunity')
+
+# run pgls and extract esimates/p-values for each formula from above
+tab_estimates_rel <- do.call('rbind', 
+                         lapply(formulas_rel, function(x) extract_estimates(x, 
+                                                                     data = data1_soc_eco_opp, 
+                                                                     tree_pruned = tree_pruned_soc_eco_opp,
+                                                                     minus_coef = c(1)))
+                         )
+
+tab_estimates_rel %<>% 
+  add_column(`Response variable` = sapply(str_split(formulas_rel, ' ~ '), `[[`, 1), .before = 1) %>% 
+  add_column(`Predictor variable` = sapply(str_split(formulas_rel, ' ~ '), `[[`, 2), .before = 2) %>% 
+  dplyr::select(-variable, -AIC) %>% 
+  mutate(estimate = round(estimate, 3), `p-value` = round(`p-value`, 3))
+
+rownames(tab_estimates_rel) <- NULL
+
+# nice output table
+tab_estimates_rel %>% 
+  kable_helsana(., caption = paste0('Relationships between social and ecological opportunity PCs. PGLS models are based on the common sample of social and ecological opportunity variables ($N=43$). Given are the estimates and corresponding p-values.'))
+```
+
+
+<br><br><br><br>
+
+# Social consequences
+## Phylogenetic PCA
+```{r, results='hide'}
+
+# choose variables to perform pPCA on:
+variables <- c('Social learning frequency', 'Coalition formation', 'Social hunting',
+               'Food sharing among adults')
+
+# Phylogenetic PCA (function in 00_socio_ecology_functions.R)
+pca.soc.cons <- phylo_pca(vars = variables, 
+                         data = data1, 
+                         tree = Petree, 
+                         type = 'Social Consequence')
+```
+
+```{r}
+# output table PCA
+kable_phylo_pca_loadings(pca.soc.cons$PC.loadings)
+```
+
+## PGLS with PC scores
+```{r}
+# add individual PC scores to data set
+data1_PC <- merge(data1, pca.soc.cons$PC.scores, by="Genus_species", all.x=T)
+# add residuals to data set for plotting
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_PC, na.action=na.exclude))
+
+# comparative data for PGLS
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+# PGLS analyses
+model1 <- pgls(PC1.Social.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+kable_pgls(model1)
+model1 <- pgls(PC2.Social.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+kable_pgls(model1)
+
+```
+
+## PGLS with pPCAs where systematically each of the variables is left out 
+
+```{r, results = 'hide'}
+tab.leave.one.out <- leave_one_out(vars = variables, data = data1, tree = Petree, type = 'Social Consequences', PC = 1)
+```
+
+```{r}
+tab.leave.one.out %>% 
+  round(., digits = 4) %>% 
+  kable_helsana(., caption = 'Estimates and p-values of the effects of brain size on PC1 of the social consequences (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
+```
+
+
+<br><br><br><br>
+
+
+# Ecological consequences
+## Phylogenetic PCA
+```{r, results='hide'}
+
+# choose variables to perform pPCA on:
+variables <- c('Degree of buffering env. seasonality', 'Diet breadth', 'Hunting',
+               'Tool use', 'Innovation frequency')
+
+# Phylogenetic PCA (function in 00_socio_ecology_functions.R)
+pca.eco.cons <- phylo_pca(vars = variables, 
+                         data = data1, 
+                         tree = Petree, 
+                         type = 'Ecological Consequence')
+```
+
+```{r}
+# output table PCA
+kable_phylo_pca_loadings(pca.eco.cons$PC.loadings)
+```
+
+## PGLS with PC scores
+```{r}
+# add individual PC scores to data set
+data1_PC <- merge(data1, pca.eco.cons$PC.scores, by="Genus_species", all.x=T)
+# add residuals to data set for plotting
+data1_PC$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_PC, na.action=na.exclude))
+
+# comparative data for PGLS
+comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+# PGLS analyses
+model1 <- pgls(PC1.Ecological.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+kable_pgls(model1)
+model1 <- pgls(PC2.Ecological.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
+kable_pgls(model1)
+
+```
+
+
+## PGLS with pPCAs where systematically each of the variables is left out 
+
+```{r, results = 'hide'}
+tab.leave.one.out <- leave_one_out(vars = variables, data = data1, tree = Petree, type = 'Ecological Consequences', PC = 1)
+```
+
+```{r}
+tab.leave.one.out %>% 
+  round(., digits = 4) %>% 
+  kable_helsana(., caption = 'Estimates and p-values of the effects of brain size on PC1 of the ecological consequences (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
+```
+
+
+# Relationship between social and ecological consequences
+```{r common sample consequences}
+# Merge social and ecological PCs to data
+data1_soc_eco_cons <- 
+  data1 %>% 
+    left_join(pca.soc.cons$PC.scores, by = 'Genus_species') %>% 
+    left_join(pca.eco.cons$PC.scores, by = 'Genus_species') %>% 
+    dplyr::select('Genus_species', 'Body.Mass', 'Brain.Size', dplyr::matches('PC1')) %>% 
+    filter(complete.cases(.))
+
+# add residuals for plotting
+data1_soc_eco_cons$ResBrainBody <- resid(m1 <- lm(log(Brain.Size) ~ log(Body.Mass), 
+                                                 data = data1_soc_eco_cons, 
+                                                 na.action = na.exclude)
+                                        )
+# comparative data
+comp_data <- comparative.data(phy = Petree, data = data1_soc_eco_cons, 
+                              names.col = Genus_species, vcv = TRUE, 
+                              na.omit = FALSE, warn.dropped = TRUE , vcv.dim = 3)
+
+
+```
+
+```{r}
+model1 <- pgls(PC1.Social.Consequence ~  PC1.Ecological.Consequence + log(Body.Mass) + log(Brain.Size), 
+               data = comp_data, 
+               lambda='ML') 
+kable_pgls(model1)
+
+
+model1 <- pgls(PC1.Ecological.Consequence ~ PC1.Social.Consequence + log(Body.Mass) + log(Brain.Size),
+               data = comp_data, 
+               lambda='ML') 
+kable_pgls(model1)
+```
+
+
+
+# Reclassification of opportunities to consequences: fission-fusion and extractive foraging
+```{r}
+
+```
+
