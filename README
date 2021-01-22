@@ -5,16 +5,22 @@ The given repository contains all code necessary for the analyses of the project
 
 ## R Files
 
-* `00_socio_ecology_functions.R`:
+* `00_socio_ecology_functions.R`: all functions which are used in the files `01_socio_ecology_data_prep.R` and `02_socio_ecology_analyses.Rmd`.
 
-* `01_socio_ecology_data_prep.R`:
+* `01_socio_ecology_data_prep.R`: Data preparation. Required in `02_socio_ecology_analyses.Rmd`.
 
-* `02_socio_ecology_data_prep.R`:
+* `02_socio_ecology_analyses.Rmd`: Actual analyses for paper and appendix.
+
+* `Analyses_old/Socio_ecology_primates_Appnedix_short.Rnw`: original analyses of Appendix document. Very very messy! 
+The analyses are recoded and restructure in the new file `02_socio_ecology_analyses.Rmd` with corresponding functions saved in `00_socio_ecology_functions.R`.
+
+* `Analyses_old/Socio_ecology_primates_Appnedix_short.Rnw`: all origin analyses. Very very messy! The most important analyses used in paper
+are newly saved in `02_socio_ecology_analyses.Rmd`.
 
 
 
 ## Data files
 
-* `appendix_primate_data_2.txt`
+* `appendix_primate_data_2.txt`: complete data set used for analyses.
 
-* `Perelman292res.nex`
+* `Perelman292res.nex`: phylogenetic tree by perelman. Probably manually adjusted by Karin Isler.
