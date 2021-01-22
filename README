@@ -1,0 +1,20 @@
+# Ecology is the Main Driver of Primate Brain Size Evolution
+
+The given repository contains all code necessary for the analyses of the project 'Ecology is the Main Driver of Primate Brain Size Evolution'.
+
+
+## R Files
+
+* `00_socio_ecology_functions.R`:
+
+* `01_socio_ecology_data_prep.R`:
+
+* `02_socio_ecology_data_prep.R`:
+
+
+
+## Data files
+
+* `appendix_primate_data_2.txt`
+
+* `Perelman292res.nex`
