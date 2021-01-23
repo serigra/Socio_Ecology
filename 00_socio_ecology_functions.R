@@ -1,9 +1,33 @@
 
+# ------------------------------------------------------------------------------
+# Functions: Ecology is the main driver of primate brain size evolution
+#
+# used in:
+#         - 01_socio_ecology_data_prep.R
+#         - 02_socio_ecology_analyses.Rmd
+#
+# author: Sereina Graber
+# ------------------------------------------------------------------------------
 
-### Functions ==================================================================
 
 
+###-----------------------------------------------------------------------------
+#                   Kable: using different default settings
+###-----------------------------------------------------------------------------
 
+kable_custom <- function(table, 
+                          options = c("condensed", 'bordered', 'hover', 'striped'), 
+                          full_width = FALSE, 
+                          position = 'left', 
+                          caption = NULL,
+                          ...){
+  
+  kable(table, caption = caption) %>%
+    kable_styling(bootstrap_options = options, 
+                  full_width = full_width, 
+                  position = position, ...)
+  
+}
 
 ###-----------------------------------------------------------------------------
 #                           kable table for PGLS
@@ -11,7 +35,7 @@
 
 kable_pgls <- function(mod){
   
-  # nice table for PGCL output
+  # nice table for PGLS output
   #
   #
   # mod <- model1
@@ -25,7 +49,7 @@ kable_pgls <- function(mod){
   tab[,] <- matrix(summary(mod)$coefficients, 1, (r*4))
   
   tab %>% 
-    kable_helsana(caption = paste("PGLS. Response:",mod$namey, "; N=", mod$n, 
+    kable_custom(caption = paste("PGLS. Response:",mod$namey, "; N=", mod$n, 
                                 "; R2 =", round(summary(mod)$r.squared, digits=2),
                                 "; Lambda =", round(mod$param[2], digits=2), 
                                 "; AIC =", round(AIC(mod))
@@ -41,6 +65,8 @@ kable_pgls <- function(mod){
 ###-----------------------------------------------------------------------------
 
 tab_gls <-  function(mod){
+  
+  # nice table output for pgls function from package nlme
   
   if (! class(mod) == "gls")
     stop("model is not of type gls")
@@ -62,6 +88,8 @@ tab_gls <-  function(mod){
 ###-----------------------------------------------------------------------------
 
 tab_phyl <- function(mod){
+  
+   # nice output table for phyloglm()
   
   if (! class(mod) == "phyloglm")
     stop("model is not of type phyloglm")
@@ -104,7 +132,9 @@ rename_vars <- function(dat){
           `Cooperative breeding` = Soc1.Cooperative.breeding.combined,
           `Dispersal` = Soc1.Dispersal..Willems.et.al..2013.,
           `Social system` = Soc1.Social.system.combined,
-          `Mating system` = Soc1.Mating.system.combined 
+          `Mating system` = Soc1.Mating.system.combined,
+          
+          Soc1.AggBGE.rate = Soc1.AggBGE.rate.of.aggressive.between.group.encounters..Willems.and.van.Schaik.2015.
            )
   
   
@@ -289,7 +319,7 @@ kable_phylo_pca_loadings <- function(pca_loadings){
   
   pca_loadings %>% 
     round(., digits = 4) %>% 
-    kable_helsana(., caption = paste('Phylogenetic PCA: ', type, '; N =', N)) %>% 
+    kable_custom(., caption = paste('Phylogenetic PCA: ', type, '; N =', N)) %>% 
     row_spec(1:2, bold = T, color = "white", background = "darkgrey")
   
 }
@@ -426,7 +456,7 @@ leave_one_out <- function(vars, data, tree, type = NULL, PC = 1){
 
 
 ###-----------------------------------------------------------------------------
-#                       Bootstrapping / Jackknife resampling
+#                           Jackknife resampling
 ###-----------------------------------------------------------------------------
 
 run_pgls <- function(data, subsample_size, response = NULL, predictors = NULL, opp = TRUE){
@@ -443,7 +473,7 @@ run_pgls <- function(data, subsample_size, response = NULL, predictors = NULL, o
   # example
   #   run_pgls(data = data1_soc_eco_opp, subsample_size = 0.8, 
   #            response = 'log(Brain.Size)',
-  #            predictors = c("PC1.Social.Opportunity", "PC2.Social.Opportunity"),
+  #            predictors = c('PC1.Social.Opportunity', 'PC2.Social.Opportunity'),
   #            opp = TRUE)
   
   # select variables needed and make sure to have complete entries
@@ -453,10 +483,10 @@ run_pgls <- function(data, subsample_size, response = NULL, predictors = NULL, o
     data_c <- data[complete.cases(data[,c("Brain.Size","Body.Mass", response)]), ]
   }
   
-  # bootstrap from data frame (%subsample size of data_c)
-  data_boot <- data[sample(nrow(data), (nrow(data_c)*subsample_size), replace = FALSE), ] 
+  # subsample from data frame (%subsample size of data_c)
+  data_subsample <- data[sample(nrow(data), (nrow(data_c)*subsample_size), replace = FALSE), ] 
   
-  comp_data <- comparative.data(phy = Petree, data = data_boot, names.col = Genus_species, 
+  comp_data <- comparative.data(phy = Petree, data = data_subsample, names.col = Genus_species, 
                                 vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE , vcv.dim = 3)
   
   pred <- " "
@@ -469,12 +499,12 @@ run_pgls <- function(data, subsample_size, response = NULL, predictors = NULL, o
   
   if (class(model1) != "try-error") {   
     output <- list(Formula = formu, 
-                   Sample.Size = nrow(data_boot),
+                   Sample.Size = nrow(data_subsample),
                    Model.output = summary(model1)$coefficients
                    )
   } else {
     output <- list(Formula = formu,
-                   Sample.Size = nrow(data_boot),
+                   Sample.Size = nrow(data_subsample),
                    Model.output = model1
                    )
   }
@@ -484,7 +514,7 @@ run_pgls <- function(data, subsample_size, response = NULL, predictors = NULL, o
 }
 
 
-boots_pgls <- function(n_iter, subsample_size, data, response = NULL, predictors = NULL, opp = TRUE) {
+jackknife_pgls <- function(n_iter, subsample_size, data, response = NULL, predictors = NULL, opp = TRUE) {
   
   # (2) Function which does jackknife, iterating over PGLS function from above
   #
@@ -497,12 +527,12 @@ boots_pgls <- function(n_iter, subsample_size, data, response = NULL, predictors
   #     opp = TRUE: if looking at opportunities (=TRUE), or consequences (=FALSE) 
   #
   # example
-  # boots_pgls(n_iter = 100,
-  #            subsample_size = 0.8,
-  #            data = data1_soc_eco_opp,
-  #            response = "log(Brain.Size)",
-  #            predictors = c("PC1.Social.Opportunity", "PC2.Social.Opportunity"),
-  #            opp = TRUE)
+  # jackknife_pgls(n_iter = 100,
+  #               subsample_size = 0.8,
+  #               data = data1_soc_eco_opp,
+  #               response = 'log(Brain.Size)',
+  #               predictors = c('PC1.Social.Opportunity', 'PC2.Social.Opportunity'),
+  #               opp = TRUE)
   
   nm <- matrix(NA, n_iter, length(predictors)+2)
   
@@ -521,7 +551,7 @@ boots_pgls <- function(n_iter, subsample_size, data, response = NULL, predictors
   colnames(nm) <- vars
   
   
-  # summarize bootstrap/jackknife results    
+  # summarize jackknife results    
   # original model
   comp_data <- comparative.data(phy = Petree, data = data, names.col = Genus_species, 
                                 vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE , vcv.dim = 3)
@@ -529,27 +559,27 @@ boots_pgls <- function(n_iter, subsample_size, data, response = NULL, predictors
   true_est <- summary(true_model)$coefficients[,1]
   true_p <- summary(true_model)$coefficients[,4]
   
-  # get confidence interval of bootstrap estimates
+  # get confidence interval of jackknifed estimates
   res.s <- data.frame(matrix(NA, length(rownames(summary(true_model)$coefficients)), 4))
   rownames(res.s) <- rownames(summary(true_model)$coefficients)
   colnames(res.s) <- c("Original estimate", "p-value", "Jackknife mean estimate", "Jackknife 95% CI")
   
   for (p in 1:length(rownames(summary(true_model)$coefficients))) {
     
-    boots_est <- nm[!nm[, p] == 999, p]
-    boots_mean <- mean(boots_est)
-    # boots_CI <- true_est[p] + c(-1,1)*1.96 * sd(boots_est) # parametric bootstrap/jackknife CI
-    # boots_CI <- boots_mean + c(-1,1)*1.96 * sd(boots_est) # parametric bootstrap/jackknife CI
-    boots_CI <- round(quantile(boots_est, c(0.025, 0.975)), digits = 4) # non-parametric bootstrap/jackknife 95% CI using quantiles
-    boots_CI <- paste("[", boots_CI[1], ", ", boots_CI[2], "]", sep = "")
-    res.s[p,] <- c(true_est[p], true_p[p], boots_mean, boots_CI)
+    jackknife_est <- nm[!nm[, p] == 999, p]
+    jackknife_mean <- mean(jackknife_est)
+    # jackknife_CI <- true_est[p] + c(-1,1)*1.96 * sd(jackknife_est) # parametric jackknife CI
+    # jackknife_CI <- jackknife_mean + c(-1,1)*1.96 * sd(jackknife_est) # parametric jackknife CI
+    jackknife_CI <- round(quantile(jackknife_est, c(0.025, 0.975)), digits = 4) # non-parametric jackknife 95% CI using quantiles
+    jackknife_CI <- paste("[", jackknife_CI[1], ", ", jackknife_CI[2], "]", sep = "")
+    res.s[p,] <- c(true_est[p], true_p[p], jackknife_mean, jackknife_CI)
     
   }  
   res.s[,1:3] <- apply(res.s[,1:3], 2, as.numeric) # make numeric in order to round in xtable
   
-  return(list(Bootsrap.Subsample = a$Sample.Size, 
-              Bootstrap.Estimates = nm,
-              Bootstrap.Summary = res.s)
+  return(list(Jackknife.Subsample = a$Sample.Size, 
+              Jackknife.Estimates = nm,
+              Jackknife.Summary = res.s)
          )
 }
 
@@ -598,7 +628,9 @@ extract_estimates <- function(formula, data, tree_pruned, minus_coef = c(1,2)) {
 #           plot circular phylogenetic tree with variables indications
 ###-----------------------------------------------------------------------------
 
-tree_circular_var <- function(data, tree){
+tree_circular_var <- function(data, tree, 
+                              size.text = 1.3, size.legend = 1.3, 
+                              x.pos.legend = -177, y.pos.legend = -100) {
   
   # Plots a circular phylogenetic tree, indicating for each species whether
   # all social, ecological opportunity and consequence variables are available.
@@ -610,9 +642,15 @@ tree_circular_var <- function(data, tree){
   # args
   #     data <- data1
   #     tree <- Petree
+  #     size.text: text size of species names
+  #     size.legend: text size of legend
+  #     x.pos.legend: x coordinate of legend position
+  #     y.pos.legend: y coordinate of legend position
   #
   # example
-  # tree_circular_var(data = data1, tree = Petree)
+  #         tree_circular_var(data = data1, tree = Petree, 
+  #                           size.text = 1.4, size.legend = 1.3,
+  #                           x.pos.legend = -185, y.pos.legend = -120)
   
   data.use <- data 
   tree.all <- tree
@@ -628,13 +666,13 @@ tree_circular_var <- function(data, tree){
   
   plot(tree.sub, 
        type="fan", 
-       show.tip.label=T,
-       no.margin=T,
-       x.lim=c(-limit, limit),
-       y.lim=c(-limit, limit), 
+       show.tip.label = T,
+       no.margin = T,
+       x.lim = c(-limit, limit),
+       y.lim = c(-limit, limit), 
        edge.color="gray47", 
-       cex=1.3 , 
-       label.offset=25)
+       cex = size.text, 
+       label.offset = 25)
   
   #-------------------------- plot social opportunities ------------------------
   
@@ -807,7 +845,11 @@ tree_circular_var <- function(data, tree){
   segments(d$x1, d$y1, d$x2, d$y2, lwd=5, col=states, lend=1) # added by Sereina
   #segments(cos(ang)*st.pt, sin(ang)*st.pt,cos(ang)*radius, sin(ang)*radius, lwd=5, col=states, lend=1)
   
-  legend(-177,-100, legend=c("social opportunities", "ecological opportunities", "social consequences", "ecological consequences"), col=c("cornflowerblue" , "darkolivegreen2","darkblue", "darkolivegreen4"), pch=15, bty="n", cex=1.3)
+  legend(x.pos.legend, y.pos.legend, legend = c("social opportunities", "ecological opportunities", "social consequences", "ecological consequences"), 
+         col = c("cornflowerblue" , "darkolivegreen2","darkblue", "darkolivegreen4"), 
+         pch = 15, 
+         bty = "n", 
+         cex = size.legend)
   
 }
 

@@ -1,9 +1,10 @@
 ---
-title: "Socio Ecology in primates - main analyses"
+title: "Ecology is the main driver of primate brain size evolution"
+subtitle: "Main analyses"
 author: "Sereina Graber"
-date: "24/07/2020"
+date: "`r Sys.Date()`"
 output:
-  html_document:
+  bookdown::html_document2:
     number_sections: true
     toc: true
     toc_float: true
@@ -14,6 +15,9 @@ output:
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
 # packages
+library(rprojroot)
+library(readxl)
+
 library(tidyverse)
 library(magrittr)
 library(patchwork)
@@ -27,25 +31,78 @@ library(ape)
 library(phytools)
 library(MCMCglmm)
 
-
 # load functions
 source('00_socio_ecology_functions.R')
-source('~/Documents/R/helper_functions_sereina.R')
 ```
 
 
 ```{r}
-# data preparation
+# load data preparation
 source('01_socio_ecology_data_prep.R')
-
-# rename variables (function in 00_socio_ecology_functions.R)
-data1 <- rename_vars(dat = data1)
 ```
 
-<br><br><br><br>
 
-# Social opportunities
-## Phylogenetic PCA
+
+
+<br><br>
+
+
+
+
+# Data
+
+## Phylogenetic tree
+```{r, fig.height = 12, fig.width = 17, fig.align = "center", fig.cap = "Phylogenetic tree of the 92 primate species showing the availability of information on the variables in the four domains including social/ecological opportunity and consequence variables."}
+
+tree_circular_var(data = data1, tree = Petree, 
+                  size.text = 1.4, size.legend = 1.3,
+                  x.pos.legend = -190, y.pos.legend = -120)
+
+```
+
+<br><br>
+
+## Numerical coding of variables
+```{r}
+num_coding <- read_xlsx(file.path(find_rstudio_root_file(), "Data/numerical_coding_variables.xlsx"),
+                                  sheet = 1, 
+                                  col_names = TRUE)
+
+num_coding %>% 
+  kable_custom(caption = "Measurements and numerical coding of variables.") %>% 
+  pack_rows(., 'Social opportunities', 1, 11) %>% 
+  pack_rows(., 'Ecological opportunities', 12, 22) %>% 
+  pack_rows(., 'Socio-cognitive consquences', 23, 26) %>% 
+  pack_rows(., 'Socio-cognitive consquences', 27, 31) 
+```
+
+
+
+
+
+<br><br>
+
+
+
+# Supplementary Tables and Analyses of Robustness: Phylogenetic Least-Squares Regressions
+
+<br>
+
+We tested the robustness of our conclusions in several different ways.
+
+*First*, we systematically excluded each of the variables from the pPCAs, and reran the subsequent PGLS regressions with the corresponding PCs to exclude the possibility that the relationships might actually be driven by a single variable. For the social opportunities, excluding single variables from the pPCA resulted in the majority of the cases in non-significant effects of the resulting two PCs on relative brain size (Table \@ref(tab:socopploo) ). For the ecological opportunity variables, the effects of the PCs on relative brain size remained basically similar (and significant for PC1), independent of which variable was excluded from the pPCA (Table \@ref(tab:ecoopploo)). These findings imply that the statistical trend of PC1 of the social opportunities in the original analysis is not robust and thus reinforces ecology as the main driver of primate brain size evolution. The analogous analyses regarding consequence variables did not change our main findings (Tables \@ref(tab:socconsloo), \@ref(tab:ecoconsloo)). Only the exclusion of hunting from the pPCA encompassing the ecological consequences yielded a non-significant result of PC1 with relative brain size, but that was because the factor loadings of the pPCA redistributed and loaded also highly on the second PC, which therefore showed a highly significant association with relative brain size (not shown).
+
+*Second*, we reclassified variables for which the assignment to opportunities could be questioned (fission- fusion and extractive foraging). Living in a fission-fusion society might not necessarily require a large brain, and is therefore classified as an opportunity variable. However, it has also been argued to require enhanced cognition in terms of long-term memory and recognition, in which case it should be classified as a consequence. Extractive foraging, on the one hand can be classified as an opportunity, since it simply represents a foraging technique used for specific types of foods (e.g. roots, tubers, specific insects), in special cases with morphological adaptations (e.g. Daubentonia madagascariensis), which does not necessarily require enhanced cognition. On the other hand, extracting foods from embedding matrices, closely linked to tool use, can be argued to be intrinsically cognitively demanding, in which case it must be classified as a consequence variable. This reclassification from opportunities to consequences made our results even stronger (see subsection 3.8).
+
+*Finally*, we excluded striking outliers (*Cebus capucinus*, *Cebus apella*, *Pan troglodytes*) (\@ref(tab:x), \@ref(tab:x), \@ref(tab:x)), conducted non-parametric jackknife without replacement (shown only for the combined model of opportunities, Table \@ref(tab:jackknife)) and used common limited samples (where data were available on both social and ecological opportunity variables as well as the consequence variables, not shown), but also none of this changed our results.
+
+
+<br><br>
+
+
+## Social opportunities
+
+### Phylogenetic PCA
 ```{r, results='hide'}
 
 # choose variables to perform pPCA on:
@@ -68,7 +125,9 @@ kable_phylo_pca_loadings(pca.soc.opp$PC.loadings)
 ```
 
 
-## PGLS with PC scores
+<br><br>
+
+### PGLS with PC scores
 ```{r}
 # add individual PC scores to data set
 data1_soc_opp <- merge(data1, pca.soc.opp$PC.scores, by = "Genus_species", all.x = T)
@@ -89,27 +148,27 @@ kable_pgls(model1)
 
 ```
 
+<br><br>
 
-## PGLS with pPCAs where systematically each of the variables is left out 
+### PGLS with pPCAs where systematically each of the variables is left out 
 
-```{r, results = 'hide'}
+```{r , results = 'hide'}
 tab.leave.one.out <- leave_one_out(vars = variables, 
                                      data = data1, 
                                      tree = Petree,
                                      type = 'Social Opportunity')
 ```
 
-```{r}
+```{r socopploo}
 tab.leave.one.out %>% 
   round(., digits = 4) %>% 
-  kable_helsana(., caption = 'Estimates and p-values of the effects of PC1 and PC2 of the social opportunities on relative brain size  (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
+  kable_custom(., caption = 'Estimates and p-values of the effects of PC1 and PC2 of the social opportunities on relative brain size  (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
 ```
 
+<br><br>
 
-<br><br><br><br>
-
-# Ecological opportunities
-## Phylogenetic PCA
+## Ecological opportunities
+### Phylogenetic PCA
 ```{r, results='hide'}
 
 # choose variables to perform pPCA on:
@@ -129,8 +188,9 @@ pca.eco.opp <- phylo_pca(vars = variables,
 kable_phylo_pca_loadings(pca.eco.opp$PC.loadings)
 ```
 
+<br><br>
 
-## PGLS with PC scores
+### PGLS with PC scores
 ```{r}
 # add individual PC scores to data set
 data1_eco_opp <- merge(data1, pca.eco.opp$PC.scores, by = "Genus_species", all.x = T)
@@ -150,22 +210,29 @@ kable_pgls(model1)
 
 ```
 
-## PGLS with pPCAs where systematically each of the variables is left out 
+<br><br>
+
+### PGLS with pPCAs where systematically each of the variables is left out 
 
 ```{r, results = 'hide'}
 tab.leave.one.out <- leave_one_out(vars = variables, data = data1, tree = Petree, type = 'Ecological Opportunity')
 ```
 
-```{r}
+```{r ecoopploo}
 tab.leave.one.out %>% 
   round(., digits = 4) %>% 
-  kable_helsana(., caption = 'Estimates and p-values of the effects of PC1 and PC2 of the ecological opportunities on relative brain size  (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
+  kable_custom(., caption = 'Estimates and p-values of the effects of PC1 and PC2 of the ecological opportunities on relative brain size  (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
 ```
 
-<br><br><br><br>
 
 
-# Social and Ecological Opportunities - common sample
+
+<br><br>
+
+
+
+
+## Social and Ecological Opportunities - common sample
 
 ```{r common sample}
 # Merge social and ecological PCs to data
@@ -196,7 +263,7 @@ tree_pruned_soc_eco_opp <- drop.tip(Petree, not)
 ```{r jackknife}
 # jaccknife resampling
 set.seed(123)
-boot_res <- boots_pgls(n_iter = 1000, 
+jackknife_res <- jackknife_pgls(n_iter = 1000, 
                        subsample_size = 0.8, 
                        data = data1_soc_eco_opp, 
                        response = "log(Brain.Size)", 
@@ -206,14 +273,14 @@ boot_res <- boots_pgls(n_iter = 1000,
 
 
 # make nice output table
-boot_res$Bootstrap.Summary %>% 
+jackknife_res$Jackknife.Summary %>% 
   # round(., digits = 4) %>% 
-  kable_helsana(., caption = paste0('Jackknife resampling (over tips) of PGLS regression model including all four opportunity PCs: $N_{iter}$ = ', nrow(boot_res$Bootstrap.Estimates), ', subsample size = ', boot_res$Bootsrap.Subsample, ' (80% of N = 43). Given are the original estimates and corresponding p-values from the original PGLS regression as well as the mean estimates and 95% confidence intervals (CI) of the jackknifed sample.'))
+  kable_custom(., caption = paste0('Jackknife resampling (over tips) of PGLS regression model including all four opportunity PCs: $N_{iter}$ = ', nrow(jackknife_res$Jackknife.Estimates), ', subsample size = ', jackknife_res$Jackknife.Subsample, ' (80% of N = 43). Given are the original estimates and corresponding p-values from the original PGLS regression as well as the mean estimates and 95% confidence intervals (CI) of the jackknifed sample.'))
 ```
 
 ```{r jackknife distribution plot, fig.width = 9, fig.height = 4.5}
 
-dat <- boot_res$Bootstrap.Estimates
+dat <- jackknife_res$Jackknife.Estimates
 dat <- as.data.frame(dat[!dat[,1] == 999, ])
 
 theme_density <- theme(
@@ -285,11 +352,14 @@ colnames(tab_estimates) <- gsub('Opportunity', 'Opp.', colnames(tab_estimates))
   
 # nice output table
 tab_estimates %>% 
-  kable_helsana(., caption = paste0('Model selection based on Akaike Information Criterion (AIC). PGLS models with log brain size as the response and the social and ecological opportunity PCs as predictor variables. Models are based on the common sample of social and ecological opportunities (', nrow(data1_soc_eco_opp)  ,') and include log body mass as a covariate. Given are the estimates and corresponding p-values in brackets.'))
+  kable_custom(., caption = paste0('Model selection based on Akaike Information Criterion (AIC). PGLS models with log brain size as the response and the social and ecological opportunity PCs as predictor variables. Models are based on the common sample of social and ecological opportunities (', nrow(data1_soc_eco_opp)  ,') and include log body mass as a covariate. Given are the estimates and corresponding p-values in brackets.'))
 ```
 
 
-# Relationship between social and ecological opportunities
+<br><br>
+
+
+## Relationship between social and ecological opportunities
 ```{r relationship social and ecological opps}
 
 formulas_rel <- c('PC1.Social.Opportunity ~ PC1.Ecological.Opportunity',
@@ -319,14 +389,19 @@ rownames(tab_estimates_rel) <- NULL
 
 # nice output table
 tab_estimates_rel %>% 
-  kable_helsana(., caption = paste0('Relationships between social and ecological opportunity PCs. PGLS models are based on the common sample of social and ecological opportunity variables ($N=43$). Given are the estimates and corresponding p-values.'))
+  kable_custom(., caption = paste0('Relationships between social and ecological opportunity PCs. PGLS models are based on the common sample of social and ecological opportunity variables ($N=43$). Given are the estimates and corresponding p-values.'))
 ```
 
 
-<br><br><br><br>
 
-# Social consequences
-## Phylogenetic PCA
+
+<br><br>
+
+
+
+
+## Social consequences
+### Phylogenetic PCA
 ```{r, results='hide'}
 
 # choose variables to perform pPCA on:
@@ -345,7 +420,9 @@ pca.soc.cons <- phylo_pca(vars = variables,
 kable_phylo_pca_loadings(pca.soc.cons$PC.loadings)
 ```
 
-## PGLS with PC scores
+<br><br>
+
+### PGLS with PC scores
 ```{r}
 # add individual PC scores to data set
 data1_PC <- merge(data1, pca.soc.cons$PC.scores, by="Genus_species", all.x=T)
@@ -363,25 +440,31 @@ kable_pgls(model1)
 
 ```
 
-## PGLS with pPCAs where systematically each of the variables is left out 
+<br><br>
+
+### PGLS with pPCAs where systematically each of the variables is left out 
 
 ```{r, results = 'hide'}
 tab.leave.one.out <- leave_one_out(vars = variables, data = data1, tree = Petree, type = 'Social Consequences', PC = 1)
 ```
 
-```{r}
+```{r socconsloo}
 tab.leave.one.out %>% 
   round(., digits = 4) %>% 
-  kable_helsana(., caption = 'Estimates and p-values of the effects of brain size on PC1 of the social consequences (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
+  kable_custom(., caption = 'Estimates and p-values of the effects of brain size on PC1 of the social consequences (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
 ```
 
 
-<br><br><br><br>
 
 
-# Ecological consequences
-## Phylogenetic PCA
-```{r, results='hide'}
+<br><br>
+
+
+
+
+## Ecological consequences
+### Phylogenetic PCA
+```{r, results = 'hide'}
 
 # choose variables to perform pPCA on:
 variables <- c('Degree of buffering env. seasonality', 'Diet breadth', 'Hunting',
@@ -399,7 +482,9 @@ pca.eco.cons <- phylo_pca(vars = variables,
 kable_phylo_pca_loadings(pca.eco.cons$PC.loadings)
 ```
 
-## PGLS with PC scores
+<br><br>
+
+### PGLS with PC scores
 ```{r}
 # add individual PC scores to data set
 data1_PC <- merge(data1, pca.eco.cons$PC.scores, by="Genus_species", all.x=T)
@@ -417,21 +502,27 @@ kable_pgls(model1)
 
 ```
 
+<br><br>
 
-## PGLS with pPCAs where systematically each of the variables is left out 
+### PGLS with pPCAs where systematically each of the variables is left out 
 
 ```{r, results = 'hide'}
 tab.leave.one.out <- leave_one_out(vars = variables, data = data1, tree = Petree, type = 'Ecological Consequences', PC = 1)
 ```
 
-```{r}
+```{r ecoconsloo}
 tab.leave.one.out %>% 
   round(., digits = 4) %>% 
-  kable_helsana(., caption = 'Estimates and p-values of the effects of brain size on PC1 of the ecological consequences (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
+  kable_custom(., caption = 'Estimates and p-values of the effects of brain size on PC1 of the ecological consequences (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
 ```
 
 
-# Relationship between social and ecological consequences
+
+<br><br>
+
+
+
+## Relationship between social and ecological consequences
 ```{r common sample consequences}
 # Merge social and ecological PCs to data
 data1_soc_eco_cons <- 
@@ -468,8 +559,10 @@ kable_pgls(model1)
 ```
 
 
+<br><br>
 
-# Reclassification of opportunities to consequences: fission-fusion and extractive foraging
+
+## Reclassification of opportunities to consequences: fission-fusion and extractive foraging
 ```{r}
 
 ```
