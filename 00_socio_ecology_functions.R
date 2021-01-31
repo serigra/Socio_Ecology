@@ -248,7 +248,7 @@ char_to_num <- function(data) {
 #                             phylogenetic PCA
 ###-----------------------------------------------------------------------------
 
-phylo_pca <- function(vars, data, tree, type = NULL) {
+phylo_pca <- function(vars, data, tree, type = NULL, invert.loading = NULL) {
   
   # Runs a phylogenetic PCA
   #
@@ -257,9 +257,11 @@ phylo_pca <- function(vars, data, tree, type = NULL) {
   # data <- data1
   # tree <- Petree
   # type <- 'Social Opportunities' / type <- 'Ecological Opportunities' / type <- 'Social Consequences'
+  # invert.loading <- c('PC1') / invert.loading <- c('PC1', 'PC2') invert loading for better interpretability
   #
   # example
-  # pca.soc.opp <- phylo_pca(vars = variables, data = data1, tree = Petree, type = 'Social Opportunity')
+  # pca.soc.opp <- phylo_pca(vars = variables, data = data1, tree = Petree,
+  #                         type = 'Social Opportunity', invert.loading = 'PC1')
   
   # select only given variables
   data_mat <- data[, c("Genus_species", vars)]
@@ -277,21 +279,22 @@ phylo_pca <- function(vars, data, tree, type = NULL) {
   # phylo PCA
   rownames(dat) <- dat$Genus_species
   res <- phytools::phyl.pca(tree_pruned, dat[, -1], method = "lambda", mode = "corr")
-  tab <- rbind(diag(res$Eval), summary(res)$importance[3,], res$L)
-  rownames(tab) <- c("Eigenvalues", "Cumulative Proportion", rownames(res$L))
+  PC.loadings <- rbind(diag(res$Eval), summary(res)$importance[3,], res$L)
+  rownames(PC.loadings) <- c("Eigenvalues", "Cumulative Proportion", rownames(res$L))
   
   # PC laodings: summary results of PCA
-  PC.loadings <- tab
-  # invert loadings PC1 social&ecological opportunities for easier interpretability
-  if (type %like% 'Opport|opport') { PC.loadings[,'PC1'] <- -1*(PC.loadings[,'PC1']) }
+  # invert loadings for easier interpretability
+  if ( !is.null(invert.loading) ) { 
+       PC.loadings[3:nrow(PC.loadings), invert.loading] <- -1*(PC.loadings[3:nrow(PC.loadings), invert.loading]) 
+    }
   attributes(PC.loadings)$type <- type
   attributes(PC.loadings)$N <- nrow(res$S)
   
   
   # PC scores: individual scores (one value per species), for further analyses
   PC.scores <- data.frame(Genus_species = dat$Genus_species, res$S[,1:3])
-  # invert loadings PC1 social&ecological opportunities for easier interpretability
-  if (type %like% 'Opport|opport') { PC.scores[,'PC1'] <- -1*(PC.scores[,'PC1']) }
+  # invert loadings for easier interpretability
+  if ( !is.null(invert.loading) ) { PC.scores[, invert.loading] <- -1*(PC.scores[, invert.loading]) }
   colnames(PC.scores)[grep("PC1", colnames(PC.scores))] <- paste0("PC1.", gsub(' ', '.', type))
   colnames(PC.scores)[grep("PC2", colnames(PC.scores))] <- paste0("PC2.", gsub(' ', '.', type))
   colnames(PC.scores)[grep("PC3", colnames(PC.scores))] <- paste0("PC3.", gsub(' ', '.', type))
@@ -363,9 +366,11 @@ leave_one_out <- function(vars, data, tree, type = NULL, PC = 1){
   rownames(m) <- rep("", length(names(dat))-2) # empty rownames, which are replaced later
   colnames(m) <- c("estimate", "p-value", "estimate", "p-value")
   
-  # original analysis (without leaving out any variable)
+  
+  # original analysis (without leaving out any variable) -----------------------
   # phylo_pca() from 00_socio_ecology_functions.R
-  pca0 <- phylo_pca(vars = vars, data = data, tree = tree, type = type)
+  if(type %like% 'Opport|opport'){i.l = 'PC1'}else{i.l = NULL}
+  pca0 <- phylo_pca(vars = vars, data = data, tree = tree, type = type, invert.loading = i.l)
   dat_PC0 <- merge(dat, pca0$PC.scores, by = "Genus_species", all.x = T)
   comp_data0 <- comparative.data(phy = tree, data = dat_PC0, names.col = Genus_species,
                                 vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
@@ -391,31 +396,43 @@ leave_one_out <- function(vars, data, tree, type = NULL, PC = 1){
   # leave systematically one variable out and rerun pPCA and PGLS --------------
   for (v in 1:length(vars)) {
     
+    # inverse PC1 and/or PC2 if necessary for more intuitive interpretation
+    if(type == 'Social Opportunity'){
+        if (v %in% c(1,2,3,9,10,11)){
+          i.l <- 'PC1'
+        } else if (v %in% c(4,7)){
+          i.l <- 'PC2'
+        } else if (v %in% c(6,8)){
+          i.l <- c('PC1', 'PC2')
+        } else{i.l = NULL}
+    }
+    
+    if(type == 'Ecological Opportunity'){
+      if (v %in% c(4,5,8,9,11)){
+        i.l <- 'PC1'
+      } else if (v %in% c(7)){
+        i.l <- 'PC2'
+      } else if (v %in% c(1,2,6)){
+        i.l <- c('PC1', 'PC2')
+      } else{i.l = NULL}
+     # i.l = NULL
+    }
+    
+    if (type == 'Social Consequences') {
+      if (v %in% c(1,3,4)){
+        i.l <- 'PC1'
+      } else{i.l = NULL}
+    }
+    
+    if (type == 'Ecological Consequences') { # inverse all
+      i.l <- 'PC1'
+    }
+    
     # run phyl.pca
-    pca1 <- phylo_pca(vars = vars[-v], data = dat, tree = tree, type = type)
+    pca1 <- phylo_pca(vars = vars[-v], data = dat, tree = tree, type = type, invert.loading = i.l)
     
     # add PCs to data set
     dat_PC1 <- merge(dat, pca1$PC.scores, by = "Genus_species", all.x = T)
-    
-    # inverse PC1 and/or PC2 if necessary for more intuitive interpretation
-    if (type == 'Social Opportunity' & !(v %in% c(1, 2, 3, 6, 8, 9, 10, 11))) {
-      dat_PC1$PC1.Social.Opportunity <- (-1)*(dat_PC1$PC1.Social.Opportunity)
-    }
-    if (type == 'Social Opportunity' & v %in% c(4, 6)) {
-      dat_PC1$PC2.Social.Opportunity <- (-1)*(dat_PC1$PC2.Social.Opportunity)
-    }
-    if (type == 'Ecological Opportunity' & v %in% c(3, 7, 10)) {
-      dat_PC1$PC1.Ecological.Opportunity <- (-1)*(dat_PC1$PC1.Ecological.Opportunity)
-      }
-    if (type == 'Ecological Opportunity' & v %in% c(1, 2, 6, 7)) {
-      dat_PC1$PC2.Ecological.Opportunity <- (-1)*(dat_PC1$PC2.Ecological.Opportunity)
-    }
-    if (type == 'Social Consequences' & v %in% c(1, 3, 4)) {
-      dat_PC1$PC1.Social.Consequences <- (-1)*(dat_PC1$PC1.Social.Consequences)
-    }
-    if (type == 'Ecological Consequences') { # inverse all
-      dat_PC1$PC1.Ecological.Consequences <- (-1)*(dat_PC1$PC1.Ecological.Consequences)
-    }
     
     # run PGLS
     comp_data1 <- comparative.data(phy = tree, data = dat_PC1, 
