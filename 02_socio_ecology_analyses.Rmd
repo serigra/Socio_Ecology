@@ -457,6 +457,25 @@ tab.leave.one.out %>%
   kable_custom(., caption = 'Estimates and p-values of the effects of brain size on PC1 of the social consequences (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
 ```
 
+<br><br>
+
+### PGLS excluding outliers - *Cebus capucinus*, *Cebus apella*, *Pan troglodytes*
+
+```{r}
+
+# exclude outliers
+data1_PC_excl <- data1_PC %>%
+                    filter(!Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"))
+
+# comparative data for PGLS
+comp_data_excl <- comparative.data(phy = Petree, data = data1_PC_excl, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+# PGLS analyses
+model1 <- pgls(PC1.Social.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data_excl, lambda='ML')
+kable_pgls(model1)
+# model1 <- pgls(PC2.Social.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data_excl, lambda='ML')
+# kable_pgls(model1)
+```
 
 
 
@@ -519,6 +538,24 @@ tab.leave.one.out %>%
   kable_custom(., caption = 'Estimates and p-values of the effects of brain size on PC1 of the ecological consequences (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
 ```
 
+<br><br>
+
+### PGLS excluding outliers - *Cebus capucinus*, *Cebus apella*, *Pan troglodytes*
+```{r}
+# exclude outliers
+data1_PC_excl <- data1_PC %>%
+                    filter(!Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"))
+
+# comparative data for PGLS
+comp_data_excl <- comparative.data(phy = Petree, data = data1_PC_excl, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
+
+# PGLS analyses
+model1 <- pgls(PC1.Ecological.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data_excl, lambda='ML')
+kable_pgls(model1)
+# model1 <- pgls(PC2.Ecological.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data_excl, lambda='ML')
+# kable_pgls(model1)
+
+```
 
 
 <br><br>
@@ -565,14 +602,65 @@ kable_pgls(model1)
 <br><br>
 
 
+### Excluding outliers - *Cebus capucinus*, *Cebus apella*, *Pan troglodytes*
+```{r}
+
+# excluding outliers
+data1_soc_eco_cons_excl <- data1_soc_eco_cons %>% 
+                                filter(!Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"))
+
+
+# comparative data
+comp_data_excl <- comparative.data(phy = Petree, data = data1_soc_eco_cons_excl, 
+                              names.col = Genus_species, vcv = TRUE, 
+                              na.omit = FALSE, warn.dropped = TRUE , vcv.dim = 3)
+
+# PGLS regressions
+model1 <- pgls(PC1.Social.Consequence ~ PC1.Ecological.Consequence,
+               data = comp_data_excl, 
+               lambda='ML') 
+kable_pgls(model1)
+
+model1 <- pgls(PC1.Social.Consequence ~ PC1.Ecological.Consequence + log(Body.Mass) + log(Brain.Size),
+               data = comp_data_excl, 
+               lambda='ML') 
+kable_pgls(model1)
+
+model1 <- pgls(PC1.Ecological.Consequence ~ PC1.Social.Consequence,
+               data = comp_data_excl, 
+               lambda='ML') 
+kable_pgls(model1)
+
+model1 <- pgls(PC1.Ecological.Consequence ~ PC1.Social.Consequence + log(Body.Mass) + log(Brain.Size),
+               data = comp_data_excl, 
+               lambda='ML') 
+kable_pgls(model1)
+
+
+```
+
+
+
+<br><br>
+
+
+
 ## Reclassification of opportunities to consequences: fission-fusion and extractive foraging
 
+<br> 
+
 Reclassifiying fission-fusion and extractive foraging as consequence variables made the original results even stronger. 
-The factor loadings of pPCA on the opportunity variables are equivalent to the original analysis (Table S23),
+The factor loadings of pPCA on the *opportunity* variables are equivalent to the original analysis (Tables \@ref(tab:socoppalt), \@ref(tab:ecooppalt)),
 and the subsequent PGLS regressions show even stronger evidence for ecological rather than social factors
 driving brain size evolution. In fact, whereas the social opportunity PCs show no effect on brain size (PGLS: N = 67, λ = 0.99, β PC1social = 0.005 (p = 0.114); β PC2social = 0.004 (p = 0.157)), both PCs of the ecological domain show significant effects (PGLS: N = 50, λ = 1.00, β PC1ecology = 0.006 (p = 0.012); β PC2ecology = 0.004 (p = 0.022)). These results hold when combining the four PCs into a single regression model (PGLS: N = 43, λ = 1.00, β PC1social = 0.002 (p = 0.655); β PC2social = 0.004 (p = 0.358), β PC1ecology = 0.006 (p = 0.030); β PC2ecology = 0.005 (p = 0.045)).
 
+<br> 
+
+Also in case of the *consequences*, the pPCA as well as the subsequent PGLS regressions result in equivalent patterns as the original analysis. For the ecological and social domain, all variables load highly on the first PC (Tables \@ref(tab:socconsalt), \@ref(tab:ecoconsalt)), and relative brain size shows strong effects on both, the social and ecological consequence PC (socio-cognitive PC1 PGLS: N = 55, λ = 0.00, β Brain = 16.393 (p = 0.007); eco-cognitive PC1 PGLS: N = 53, λ = 0.91, β Brain = 20.033 (p = 0.015); eco-cognitive PC2 PGLS: N = 53, λ = 0.00, β Brain = 17.910 (p < 0.001)). Also the relationsip between the social and ecological consequence PCs is highly significant (PGLS: N = 31, λ = 0.00, β PC1 Ecological Cons. = 0.889 (p < 0.001)), whereas there is no relationship between the opportunity PCs (results not shown).
+
+
 <br><br> 
+
 
 ### Social opportunities
 
@@ -593,7 +681,7 @@ pca.soc.opp.alt <- phylo_pca(vars = variables,
                              type = 'Social Opportunity')
 ```
 
-```{r}
+```{r socoppalt}
 # output table PCA
 kable_phylo_pca_loadings(pca.soc.opp.alt$PC.loadings)
 ```
@@ -644,7 +732,7 @@ pca.eco.opp.alt <- phylo_pca(vars = variables,
                          invert.loading = 'PC2')
 ```
 
-```{r}
+```{r ecooppalt}
 # output table PCA
 kable_phylo_pca_loadings(pca.eco.opp.alt$PC.loadings)
 ```
@@ -717,7 +805,7 @@ pca.soc.cons.alt <- phylo_pca(vars = variables,
                          invert.loading <- c('PC1', 'PC2'))
 ```
 
-```{r}
+```{r socconsalt}
 # output table PCA
 kable_phylo_pca_loadings(pca.soc.cons.alt$PC.loadings)
 ```
@@ -762,7 +850,7 @@ pca.eco.cons.alt <- phylo_pca(vars = variables,
                          type = 'Ecological Consequence')
 ```
 
-```{r}
+```{r ecoconsalt}
 # output table PCA
 kable_phylo_pca_loadings(pca.eco.cons.alt$PC.loadings)
 ```
