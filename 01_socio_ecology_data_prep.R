@@ -58,6 +58,15 @@ levels(data$Genus_species)[levels(data$Genus_species)=="Callithrix_humeralifer"]
 #levels(data$Genus_species)[levels(data$Genus_species)=="Presbytis_potenziani"] <- "Presbytis_melalophos"
 
 
+# add family names for each species
+family_primates <- read.csv("~/Documents/University/PhD/Social vs. ecological factor in brain size evolution/2020_Analyses/Data/Species_family.csv",
+                            stringsAsFactors=FALSE)
+data <- data %>% 
+          left_join(family_primates[, c("Genus_species", 'family')], by = "Genus_species") %>% 
+          mutate(family = replace_na(family, 'unknown'))
+
+
+
 # read in tree:
 Petree <- read.nexus("Data/Perelman292res.nex")
 # tree10k <- read.nexus("consensusTree_10kTrees_Primates_Version3.nex")
