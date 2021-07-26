@@ -639,6 +639,250 @@ extract_estimates <- function(formula, data, tree_pruned, minus_coef = c(1,2)) {
 
 
 
+###-----------------------------------------------------------------------------
+#                 Path analysis: DAG (Directed Acyclic Graphs)
+###-----------------------------------------------------------------------------
+
+
+phylopath_DAGs <- function() {
+  
+  # example
+  #           models <- phylopath_DAGs()
+  #
+  
+  models <- list(
+    
+    A1 = DAG(Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain, PC1.Ecological.Consequence ~ Residuals_brain),
+    
+    A2 = DAG(Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain, PC1.Ecological.Consequence ~ Residuals_brain,
+             PC1.Social.Consequence ~ PC1.Ecological.Consequence),
+    
+    A3 = DAG(Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain, PC1.Ecological.Consequence ~ Residuals_brain,
+             PC1.Ecological.Consequence ~ PC1.Social.Consequence),
+    
+    A4 = DAG(PC1.Social.Opportunity ~ PC1.Ecological.Opportunity, PC1.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC2.Social.Opportunity ~ PC1.Ecological.Opportunity, PC2.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain, PC1.Ecological.Consequence ~ Residuals_brain),
+    
+    A5 = DAG(PC1.Ecological.Opportunity ~ PC1.Social.Opportunity, PC2.Ecological.Opportunity ~ PC1.Social.Opportunity,
+             PC1.Ecological.Opportunity ~ PC2.Social.Opportunity, PC2.Ecological.Opportunity ~ PC2.Social.Opportunity,
+             Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain, PC1.Ecological.Consequence ~ Residuals_brain),
+    
+    A6 = DAG(PC1.Social.Opportunity ~ PC1.Ecological.Opportunity, PC1.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC2.Social.Opportunity ~ PC1.Ecological.Opportunity, PC2.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain, PC1.Ecological.Consequence ~ Residuals_brain,
+             PC1.Social.Consequence ~ PC1.Ecological.Consequence),
+    
+    A7 = DAG(PC1.Ecological.Opportunity ~ PC1.Social.Opportunity, PC2.Ecological.Opportunity ~ PC1.Social.Opportunity,
+             PC1.Ecological.Opportunity ~ PC2.Social.Opportunity, PC2.Ecological.Opportunity ~ PC2.Social.Opportunity,
+             Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain, PC1.Ecological.Consequence ~ Residuals_brain,
+             PC1.Ecological.Consequence ~  PC1.Social.Consequence),
+    
+    B1 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence),
+    
+    B2 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Social.Consequence ~ PC1.Ecological.Consequence),
+    
+    B3 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Ecological.Consequence ~ PC1.Social.Consequence),
+    
+    B4 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Social.Opportunity ~ PC1.Ecological.Opportunity, PC1.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC2.Social.Opportunity ~ PC1.Ecological.Opportunity, PC2.Social.Opportunity ~ PC2.Ecological.Opportunity),
+    
+    B5 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Ecological.Opportunity ~ PC1.Social.Opportunity, PC2.Ecological.Opportunity ~ PC1.Social.Opportunity,
+             PC1.Ecological.Opportunity ~ PC2.Social.Opportunity, PC2.Ecological.Opportunity ~ PC2.Social.Opportunity),
+    
+    B6 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Social.Opportunity ~ PC1.Ecological.Opportunity, PC1.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC2.Social.Opportunity ~ PC1.Ecological.Opportunity, PC2.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ PC1.Ecological.Consequence),
+    
+    B7 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Ecological.Opportunity ~ PC1.Social.Opportunity, PC2.Ecological.Opportunity ~ PC1.Social.Opportunity,
+             PC1.Ecological.Opportunity ~ PC2.Social.Opportunity, PC2.Ecological.Opportunity ~ PC2.Social.Opportunity,
+             PC1.Ecological.Consequence ~ PC1.Social.Consequence),
+    
+    C1 = DAG(Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence),
+    
+    C2 = DAG(Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Social.Consequence ~ PC1.Ecological.Consequence),
+    
+    C3 = DAG(Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Ecological.Consequence ~ PC1.Social.Consequence),
+    
+    C4 = DAG(Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Social.Opportunity ~ PC1.Ecological.Opportunity, PC1.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC2.Social.Opportunity ~ PC1.Ecological.Opportunity, PC2.Social.Opportunity ~ PC2.Ecological.Opportunity),
+    
+    C5 = DAG(Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Ecological.Opportunity ~ PC1.Social.Opportunity, PC2.Ecological.Opportunity ~ PC1.Social.Opportunity,
+             PC1.Ecological.Opportunity ~ PC2.Social.Opportunity, PC2.Ecological.Opportunity ~ PC2.Social.Opportunity),
+    
+    C6 = DAG(Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Social.Opportunity ~ PC1.Ecological.Opportunity, PC1.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC2.Social.Opportunity ~ PC1.Ecological.Opportunity, PC2.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ PC1.Ecological.Consequence),
+    
+    C7 = DAG(Residuals_brain ~ PC1.Social.Opportunity , Residuals_brain ~ PC2.Social.Opportunity, 
+             Residuals_brain ~ PC1.Ecological.Opportunity , Residuals_brain ~ PC2.Ecological.Opportunity,
+             Residuals_brain ~ PC1.Social.Consequence, Residuals_brain ~  PC1.Ecological.Consequence,
+             PC1.Ecological.Opportunity ~ PC1.Social.Opportunity, PC2.Ecological.Opportunity ~ PC1.Social.Opportunity,
+             PC1.Ecological.Opportunity ~ PC2.Social.Opportunity, PC2.Ecological.Opportunity ~ PC2.Social.Opportunity,
+             PC1.Ecological.Consequence ~ PC1.Social.Consequence),
+    
+    D1 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             PC1.Social.Consequence ~ Residuals_brain , PC1.Ecological.Consequence ~ Residuals_brain),
+    
+    D2 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             PC1.Social.Consequence ~ Residuals_brain , PC1.Ecological.Consequence ~ Residuals_brain,
+             PC1.Social.Consequence ~ PC1.Ecological.Consequence),
+    
+    D3 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             PC1.Social.Consequence ~ Residuals_brain , PC1.Ecological.Consequence ~ Residuals_brain,
+             PC1.Ecological.Consequence ~ PC1.Social.Consequence),
+    
+    D4 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             PC1.Social.Opportunity ~ PC1.Ecological.Opportunity, PC1.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC2.Social.Opportunity ~ PC1.Ecological.Opportunity, PC2.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain , PC1.Ecological.Consequence ~ Residuals_brain),
+    
+    D5 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             PC1.Ecological.Opportunity ~ PC1.Social.Opportunity, PC2.Ecological.Opportunity ~ PC1.Social.Opportunity,
+             PC1.Ecological.Opportunity ~ PC2.Social.Opportunity, PC2.Ecological.Opportunity ~ PC2.Social.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain , PC1.Ecological.Consequence ~ Residuals_brain),
+    
+    D6 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             PC1.Social.Opportunity ~ PC1.Ecological.Opportunity, PC1.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC2.Social.Opportunity ~ PC1.Ecological.Opportunity, PC2.Social.Opportunity ~ PC2.Ecological.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain , PC1.Ecological.Consequence ~ Residuals_brain,
+             PC1.Social.Consequence ~ PC1.Ecological.Consequence),
+    
+    D7 = DAG(PC1.Social.Opportunity ~ Residuals_brain , PC2.Social.Opportunity ~ Residuals_brain, 
+             PC1.Ecological.Opportunity ~ Residuals_brain , PC2.Ecological.Opportunity ~ Residuals_brain,
+             PC1.Ecological.Opportunity ~ PC1.Social.Opportunity, PC2.Ecological.Opportunity ~ PC1.Social.Opportunity,
+             PC1.Ecological.Opportunity ~ PC2.Social.Opportunity, PC2.Ecological.Opportunity ~ PC2.Social.Opportunity,
+             PC1.Social.Consequence ~ Residuals_brain , PC1.Ecological.Consequence ~ Residuals_brain,
+             PC1.Ecological.Consequence ~ PC1.Social.Consequence)
+    
+  )
+  
+  return(models)
+  
+}
+
+
+
+###-----------------------------------------------------------------------------
+#                        Plot Path analysis model
+###-----------------------------------------------------------------------------
+
+ellipse <- function(hlaxa = 1, hlaxb = 1, theta = 0,
+                    xc = 0, yc = 0, npoints = 100) {
+  
+  # Args
+  #
+  # hlaxa    half-length of the major axis (parallel to the X-axis when theta = 0)
+  # hlaxb    half-length of the minor axis
+  # theta    angle of rotation, measured counter-clockwise from the positive X-axis
+  # xc       the X-coordinate of the centre
+  # yc       the Y-coordinate of the centre
+  # npoints  the number of line segments used to approximate the ellipse
+  
+  xp <- NULL
+  yp <- NULL
+  for(i in 0:npoints) {
+    a <- (2 * pi * i)/npoints
+    x <- hlaxa * cos(a)
+    y <- hlaxb * sin(a)
+    
+    if(theta != 0) {
+      alpha <- angle(x, y)
+      rad <- sqrt(x^2 + y^2)
+      x <- rad * cos(alpha + theta)
+      y <- rad * sin(alpha + theta)
+    }
+    xp <- c(xp, x + xc)
+    yp <- c(yp, y + yc)
+  }
+  
+  points(xp, yp, type = "l", add = T)
+}
+
+
+
+# xl <- 2.7
+# yl <- 1.9
+# 
+# plot(c(-10,10), c(-10,10), xlab="X", ylab="Y", type="n")
+# ellipse(hlaxa = xl, hlaxb = yl, theta = 0, xc = -7.8, yc = 3, npoints = 100)
+# ellipse(hlaxa = xl, hlaxb = yl, theta = 0, xc = -7.8, yc = -3, npoints = 100)
+# ellipse(hlaxa = xl, hlaxb = yl, theta = 0, xc = -4.5, yc = -7, npoints = 100)
+# ellipse(hlaxa = xl, hlaxb = yl, theta = 0, xc = -4.5, yc = 7, npoints = 100)
+# 
+# ellipse(hlaxa = xl, hlaxb = yl, theta = 0, xc = 0, yc = 0, npoints = 100)
+# 
+# ellipse(hlaxa = xl, hlaxb = yl, theta = 0, xc = 4.5, yc = 7, npoints = 100)
+# ellipse(hlaxa = xl, hlaxb = yl, theta = 0, xc = 4.5, yc = -7, npoints = 100)
+# ellipse(hlaxa = xl, hlaxb = yl, theta = 0, xc = 7.8, yc = 3, npoints = 100)
+# ellipse(hlaxa = xl, hlaxb = yl, theta = 0, xc = 7.8, yc = -3, npoints = 100)
+# 
+# 
+# arrows(x0 = (-7.8+xl), y0 = 3, x1 = 0-(xl-0.1), y1 = 0.5, angle = -30, length = 0.1)
+# arrows(x0 = (-7.8+xl), y0 = -3, x1 = 0-(xl-0.1), y1 = -0.5, angle = -30, length = 0.1)
+# 
+# arrows(x0 = -4+(xl/2.2), y0 = 7-(yl-0.4), x1 = 0-(0.8) , y1 = 0+(yl), angle = -30, length = 0.1)
+# arrows(x0 = -4+(xl/2.2), y0 = -7+(yl-0.4), x1 = 0-(0.8) , y1 = 0-(yl), angle = -30, length = 0.1)
+# 
+# arrows(x0 = -4+(xl/2.2), y0 = 7-(yl-0.4), x1 = 0-(0.8) , y1 = 0+(yl), angle = -30, length = 0.1)
+# arrows(x0 = -4+(xl/2.2), y0 = -7+(yl-0.4), x1 = 0-(0.8) , y1 = 0-(yl), angle = -30, length = 0.1)
 
 
 ###-----------------------------------------------------------------------------
