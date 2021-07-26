@@ -29,6 +29,7 @@ library(caper)
 library(nlme)
 library(ape)
 library(phytools)
+library(phylopath)
 library(MCMCglmm)
 
 # load functions
@@ -49,7 +50,7 @@ source('01_socio_ecology_data_prep.R')
 
 
 
-# Data
+# Supplementary Material & Methods
 
 ## Phylogenetic tree
 ```{r, fig.height = 12, fig.width = 17, fig.align = "center", fig.cap = "Phylogenetic tree of the 92 primate species showing the availability of information on the variables in the four domains including social/ecological opportunity and consequence variables."}
@@ -81,6 +82,7 @@ num_coding %>%
 
 
 
+
 <br><br>
 
 
@@ -95,7 +97,7 @@ We tested the robustness of our conclusions in several different ways.
 
 *Second*, we reclassified variables for which the assignment to opportunities could be questioned (fission- fusion and extractive foraging). Living in a fission-fusion society might not necessarily require a large brain, and is therefore classified as an opportunity variable. However, it has also been argued to require enhanced cognition in terms of long-term memory and recognition, in which case it should be classified as a consequence. Extractive foraging, on the one hand can be classified as an opportunity, since it simply represents a foraging technique used for specific types of foods (e.g. roots, tubers, specific insects), in special cases with morphological adaptations (e.g. Daubentonia madagascariensis), which does not necessarily require enhanced cognition. On the other hand, extracting foods from embedding matrices, closely linked to tool use, can be argued to be intrinsically cognitively demanding, in which case it must be classified as a consequence variable. This reclassification from opportunities to consequences made our results even stronger (see subsection 3.8).
 
-*Finally*, we excluded striking outliers (*Cebus capucinus*, *Cebus apella*, *Pan troglodytes*) (\@ref(tab:x), \@ref(tab:x), \@ref(tab:x)), conducted non-parametric jackknife without replacement (shown only for the combined model of opportunities, Table \@ref(tab:jackknife)) and used common limited samples (where data were available on both social and ecological opportunity variables as well as the consequence variables, not shown), but also none of this changed our results.
+*Finally*, we excluded striking outliers (*Cebus capucinus*, *Cebus apella*, *Pan troglodytes*) (\@ref(tab:socconsexcl), \@ref(tab:ecoconsexcl), \@ref(tab:socecoconsexcl)), conducted non-parametric jackknife without replacement (shown only for the combined model of opportunities, Table \@ref(tab:jackknife)) and used common limited samples (where data were available on both social and ecological opportunity variables as well as the consequence variables, not shown), but also none of this changed our results.
 
 
 <br><br>
@@ -263,6 +265,67 @@ not <- subset(Petree$tip.label, matches == 0)
 tree_pruned_soc_eco_opp <- drop.tip(Petree, not)
 ```
 
+
+```{r plot regression opportunities}
+
+# plot for paper (Figure 2, A-D)
+
+data1_soc_eco_opp_long <- data1_soc_eco_opp %>% 
+                                pivot_longer(
+                                 cols = starts_with("PC"),
+                                 names_to = "PC_type",
+                                 names_prefix = "",
+                                 values_to = "PC_values",
+                                 values_drop_na = TRUE
+                               ) %>% 
+  mutate(PC_type = factor(x = PC_type, 
+                          levels = c('PC1.Social.Opportunity', 'PC2.Social.Opportunity',
+                                     'PC1.Ecological.Opportunity', 'PC2.Ecological.Opportunity'),
+                          labels = c('PC1 Social Opportunities', 'PC2 Social Opportunities',
+                                    'PC1 Ecological Opportunities', 'PC2 Ecological Opportunities')
+                          )
+         ) %>% 
+  left_join(data1[,c('Genus_species', 'family')], by = 'Genus_species')
+
+
+labels <- data.frame(PC_type = c("PC1 Social Opportunities", "PC2 Social Opportunities",
+                               "PC1 Ecological Opportunities", "PC2 Ecological Opportunities"),
+                       plot_labels = c("A", "B", "C", "D"),
+                       pvalue_labels = c("p = 0.442", "p = 0.699", "p = 0.024", "p = 0.089")
+                       )
+
+# slopes <- data.frame(PC_type = c("PC1 Social Opportunities", "PC2 Social Opportunities",
+#                                "PC1 Ecological Opportunities", "PC2 Ecological Opportunities"),
+#                      intercept = jackknife_res$Jackknife.Summary['(Intercept)', 'Original estimate'],
+#                      slopes = jackknife_res$Jackknife.Summary[ 3:6, 'Original estimate']
+#                      )
+
+p.A.D <- data1_soc_eco_opp_long %>% 
+  ggplot(., aes(x = PC_values, y = ResBrainBody)) +
+    geom_point(aes(color = family, shape = family), size = 2.5) + 
+    scale_shape_manual(values=c(15, 16, 17, 18, 11, 13, 8, 10, 25)) +
+    scale_color_brewer(palette="Paired") +
+    geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
+    #geom_abline(aes(intercept = intercept,  slope = slopes), data = slopes)  +
+    labs(x = 'PC values', y = 'Residuals brain size') +
+    facet_wrap(~ PC_type) +
+    theme(panel.border = element_rect(fill = NA, colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          strip.background = element_blank(),
+          axis.line = element_line(colour = "grey"),
+          legend.key = element_rect(fill = "white")
+          ) +
+    geom_text(x = -29, y = 0.55, aes(label = plot_labels), data = labels) +
+    geom_text(x =  25, y = -0.77, aes(label = pvalue_labels), data = labels)
+    
+
+```
+
+
+
+
 ```{r jackknife}
 # jaccknife resampling
 set.seed(123)
@@ -281,44 +344,100 @@ jackknife_res$Jackknife.Summary %>%
   kable_custom(., caption = paste0('Jackknife resampling (over tips) of PGLS regression model including all four opportunity PCs: $N_{iter}$ = ', nrow(jackknife_res$Jackknife.Estimates), ', subsample size = ', jackknife_res$Jackknife.Subsample, ' (80% of N = 43). Given are the original estimates and corresponding p-values from the original PGLS regression as well as the mean estimates and 95% confidence intervals (CI) of the jackknifed sample.'))
 ```
 
-```{r jackknife distribution plot, fig.width = 9, fig.height = 4.5}
+<br>
+
+```{r plot jackknife distribution}
 
 dat <- jackknife_res$Jackknife.Estimates
 dat <- as.data.frame(dat[!dat[,1] == 999, ])
 
-theme_density <- theme(
-        axis.title = element_text(size = 13, color = "black"),
-        axis.text.x  = element_text(vjust = 0.5, size = 12),
-        axis.text.y = element_text(vjust = 0.5, size = 13),
-        panel.border = element_rect(fill = NA, size = 2),
-        #plot.title = element_text(size = 20),
-        panel.background = element_blank(),
-        strip.background = element_blank(),
-        legend.position = c(0.78, 0.7),
-        legend.title = element_blank(),
-        legend.text = element_text(size = 11))
+
+# Plot for paper (Figure 2 E, F)
+
+### ============================ PLOT VERSION 1 ================================
+
+# theme_density <- theme(
+#         axis.title = element_text(size = 13, color = "black"),
+#         axis.text.x  = element_text(vjust = 0.5, size = 12),
+#         axis.text.y = element_text(vjust = 0.5, size = 13),
+#         panel.border = element_rect(fill = NA, size = 2),
+#         #plot.title = element_text(size = 20),
+#         panel.background = element_blank(),
+#         strip.background = element_blank(),
+#         legend.position = c(0.78, 0.7),
+#         legend.title = element_blank(),
+#         legend.text = element_text(size = 11))
 
 # PC1
-p.pc1 <- ggplot(data = dat) +
-  geom_density(aes(x = PC1.Ecological.Opportunity, fill = 'ecological opp.'),  alpha = 0.5) +
-  geom_density(aes(x = PC1.Social.Opportunity, fill = 'social opp.'), alpha = 0.5) +
-  scale_fill_manual( values = c("olivedrab4","steelblue3")) +
-  theme_density +
-  labs(x = 'Estimates PC1')
+# p.pc1 <- ggplot(data = dat) +
+#   geom_density(aes(x = PC1.Ecological.Opportunity, fill = 'ecological opp.'),  alpha = 0.5) +
+#   geom_density(aes(x = PC1.Social.Opportunity, fill = 'social opp.'), alpha = 0.5) +
+#   scale_fill_manual( values = c("olivedrab4","steelblue3")) +
+#   theme_2 +
+#   labs(x = 'Estimates PC1')
+# 
+# # PC2 
+# p.pc2 <- ggplot(data = dat) +
+#   geom_density(aes(x = PC2.Ecological.Opportunity, fill = "ecological opp."), alpha = 0.5) +
+#   geom_density(aes(x = PC2.Social.Opportunity, fill = "social opp."), alpha = 0.5) +
+#   scale_fill_manual( values = c("olivedrab4","steelblue3")) +
+#   theme_2 +
+#   labs(x = 'Estimates PC2')
 
-# PC2 
-p.pc2 <- ggplot(data = dat) +
-  geom_density(aes(x = PC2.Ecological.Opportunity, fill = "ecological opp."), alpha = 0.5) +
-  geom_density(aes(x = PC2.Social.Opportunity, fill = "social opp."), alpha = 0.5) +
-  scale_fill_manual( values = c("olivedrab4","steelblue3")) +
-  theme_density +
-  labs(x = 'Estimates PC2')
+# p.pc1 + p.pc2 + 
+#   plot_annotation(title = '1000 Jackknife replicates of combined plgs model', tag_levels = 'A') &
+#   theme(plot.title = element_text(size = 16), 
+#         plot.tag = element_text(size = 14))
 
-p.pc1 + p.pc2 + 
-  plot_annotation(title = '1000 Jackknife replicates of combined plgs model', tag_levels = 'A') &
-  theme(plot.title = element_text(size = 16), 
-        plot.tag = element_text(size = 14))
+
+
+### ============================ PLOT VERSION 2 ================================
+
+theme_density_2 <- theme(panel.border = element_rect(fill = NA, colour = "black"),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                panel.background = element_blank(),
+                strip.background = element_blank(),
+                #legend.position = c(0.85, 0.85),
+                axis.line = element_line(colour = "grey"),
+                legend.key = element_rect(fill = "white"),
+                legend.title=element_blank()
+                )
+
+dat_long <- dat %>% 
+                pivot_longer(cols = starts_with("PC"),
+                             names_to = "PC_type",
+                             names_prefix = "PC",
+                             values_to = "PC_values",
+                             values_drop_na = TRUE) %>% 
+                separate(PC_type, c("PC", "Opportunity_type")) %>% 
+                pivot_wider(names_from = 'Opportunity_type', values_from = 'PC_values') 
+
+labels_EF <- data.frame(PC = c("1", "2"),
+                        plot_labels = c("E", "F"))
+
+p.E.F <- dat_long %>% 
+  ggplot(.) +
+  geom_density(aes(x = Ecological, fill = "ecological opp."), alpha = 0.5) +
+  geom_density(aes(x = Social, fill = "social opp."), alpha = 0.5) +
+  scale_fill_manual( values = c("olivedrab4","steelblue3")) +
+  theme_density_2 +
+  labs(x = 'Estimates') + 
+  facet_wrap(~ paste0('PC ', PC) )  +
+  geom_text(x = -0.01, y = 220, aes(label = plot_labels), data = labels_EF)
+
 ```
+
+```{r figure 2, fig.height = 8, fig.align = 'center', fig.cap = "Unidirectional Analysis: PGLS on Opportunities. Bivariate relationships between relative brain size (residuals of log brain vs. log body) and the principal components of the social (A, B) and ecological (C, D) opportunities (N=43; presented are raw, non-phylogenetically corrected data; p-values are based on the PGLS regression model). Density distributions are the result of 1,000 jackknife resampling replicates of PGLS regression estimates (E, F; Table 2.7)"}
+
+### ========================= PUT PLOTS INTO ONE PLOT  =========================
+
+p.A.D + p.E.F +
+  plot_layout(ncol = 1, heights = c(2,1))
+
+```
+
+<br>
 
 ```{r AIC model comparison I, results = 'hide'}
 
@@ -461,7 +580,7 @@ tab.leave.one.out %>%
 
 ### PGLS excluding outliers - *Cebus capucinus*, *Cebus apella*, *Pan troglodytes*
 
-```{r}
+```{r socconsexcl}
 
 # exclude outliers
 data1_PC_excl <- data1_PC %>%
@@ -541,7 +660,7 @@ tab.leave.one.out %>%
 <br><br>
 
 ### PGLS excluding outliers - *Cebus capucinus*, *Cebus apella*, *Pan troglodytes*
-```{r}
+```{r ecoconsexcl}
 # exclude outliers
 data1_PC_excl <- data1_PC %>%
                     filter(!Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"))
@@ -598,12 +717,93 @@ model1 <- pgls(PC1.Ecological.Consequence ~ PC1.Social.Consequence + log(Body.Ma
 kable_pgls(model1)
 ```
 
+<br>
+
+```{r}
+
+data1_soc_cons <- merge(data1, pca.soc.cons$PC.scores, by="Genus_species", all.x=T) %>% 
+  dplyr::select(family, Genus_species, Brain.Size, Body.Mass, PC1.Social.Consequence) %>% 
+  filter(complete.cases(.))
+
+# add residuals to data set for plotting
+data1_soc_cons$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_soc_cons, na.action=na.exclude))
+
+
+plot.soc.cons <- data1_soc_cons %>% 
+ ggplot(., aes(x = ResBrainBody, y = PC1.Social.Consequence)) +
+    geom_point(aes(color = family, shape = family), size = 2.5) + 
+    scale_shape_manual(values=c(15, 16, 17, 18, 11, 13, 8, 10, 25, 10, 12, 7, 4)) +
+    scale_color_manual(values = c(brewer.pal(n = 12, name = "Paired"), '#000000')) +
+    geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
+    labs(x = 'Residuals brain size', y = 'PC 1 social consequences') +
+    theme(panel.border = element_rect(fill = NA, colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          strip.background = element_blank(),
+          axis.line = element_line(colour = "grey"),
+          legend.key = element_rect(fill = "white")
+          ) +
+    geom_text(x = -0.81, y = 60, label = 'A')
+
+
+
+
+
+data1_eco_cons <- merge(data1, pca.eco.cons$PC.scores, by="Genus_species", all.x=T) %>% 
+  dplyr::select(family, Genus_species, Brain.Size, Body.Mass, PC1.Ecological.Consequence) %>% 
+  filter(complete.cases(.))
+
+# add residuals to data set for plotting
+data1_eco_cons$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_eco_cons, na.action=na.exclude))
+
+plot.eco.cons <- data1_eco_cons %>% 
+ ggplot(., aes(x = ResBrainBody, y = PC1.Ecological.Consequence)) +
+    geom_point(aes(color = family, shape = family), size = 2.5) + 
+    scale_shape_manual(values=c(15, 16, 17, 18, 11, 13, 8, 10, 25, 10, 12, 7, 4)) +
+    scale_color_manual(values = c(brewer.pal(n = 12, name = "Paired"), '#000000')) +
+    geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
+    labs(x = 'Residuals brain size', y = 'PC1 ecological consequences') +
+    theme(panel.border = element_rect(fill = NA, colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          strip.background = element_blank(),
+          axis.line = element_line(colour = "grey"),
+          legend.key = element_rect(fill = "white")
+          ) +
+    geom_text(x = -0.75, y = 37, label = 'B') 
+
+
+
+plot.soc.eco.cons <- data1_soc_eco_cons %>%
+  left_join(data1[,c("family", 'Genus_species')], by = 'Genus_species') %>% 
+ ggplot(., aes(x = PC1.Ecological.Consequence, y = PC1.Social.Consequence)) +
+    geom_point(aes(color = family, shape = family), size = 2.5) + 
+    scale_shape_manual(values=c(15, 16, 17, 18, 11, 13, 8, 10, 25, 10, 12, 7, 4)) +
+    scale_color_manual(values = c(brewer.pal(n = 12, name = "Paired"), '#000000')) +
+    geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
+    labs(x = 'PC1 ecological consequences', y = 'PC1 social consequences') +
+    theme(panel.border = element_rect(fill = NA, colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          strip.background = element_blank(),
+          axis.line = element_line(colour = "grey"),
+          legend.key = element_rect(fill = "white")
+          ) +
+    geom_text(x = -8, y = 59, label = 'C') 
+
+
+plot.soc.cons + plot.eco.cons + plot.soc.eco.cons
+```
+
 
 <br><br>
 
 
 ### Excluding outliers - *Cebus capucinus*, *Cebus apella*, *Pan troglodytes*
-```{r}
+```{r socecoconsexcl}
 
 # excluding outliers
 data1_soc_eco_cons_excl <- data1_soc_eco_cons %>% 
@@ -874,3 +1074,140 @@ model1 <- pgls(PC2.Ecological.Consequence ~  log(Body.Mass) + log(Brain.Size), d
 kable_pgls(model1)
 
 ```
+
+
+
+
+<br><br>
+
+
+
+
+# Supplementary Tables and Figures: Phylogenetic path analyses
+
+<br>
+
+```{r echo=FALSE, out.height = 400, out.width = 400, fig.align = 'center', fig.cap = "Phylogenetic Path Analysis. Candidate models A: Opportunities --> brain size --> consequences."}
+knitr::include_graphics(path = 'Plots/Path_models_A.png')
+```
+
+<br>
+
+```{r echo=FALSE, out.height = 400, out.width = 400, fig.align = 'center', fig.cap = "Phylogenetic Path Analysis. Candidate models B: Opportunities <-- brain size <-- consequences."}
+knitr::include_graphics(path = 'Plots/Path_models_B.png')
+```
+
+<br>
+
+```{r echo=FALSE, out.height = 400, out.width = 400, fig.align = 'center', fig.cap = "Phylogenetic Path Analysis. Candidate models C: Opportunities --> brain size <-- consequences."}
+knitr::include_graphics(path = 'Plots/Path_models_C.png')
+```
+
+<br>
+
+```{r echo=FALSE, out.height = 400, out.width = 400, fig.align = 'center', fig.cap = "Phylogenetic Path Analysis. Candidate models D: Opportunities <-- brain size --> consequences."}
+knitr::include_graphics(path = 'Plots/Path_models_D.png')
+```
+
+<br><br>
+
+```{r}
+# # Merge social and ecological opportunities & consequences PCs to data
+data1_soc_eco_opp_cons <-
+   data1 %>%
+     left_join(pca.soc.opp$PC.scores, by = 'Genus_species') %>% 
+     left_join(pca.eco.opp$PC.scores, by = 'Genus_species') %>% 
+     left_join(pca.soc.cons$PC.scores, by = 'Genus_species') %>%
+     left_join(pca.eco.cons$PC.scores, by = 'Genus_species') %>%
+     dplyr::select('Genus_species', 'Body.Mass', 'Brain.Size', dplyr::matches('PC1|PC2')) %>%
+     dplyr::select(-PC2.Social.Consequence, -PC2.Ecological.Consequence) %>% 
+     filter(complete.cases(.))
+ 
+# add residuals for path analysis
+data1_soc_eco_opp_cons$Residuals_brain <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_soc_eco_opp_cons, na.action = na.exclude))
+
+# add rownmaes for path analysis
+rownames(data1_soc_eco_opp_cons) <- data1_soc_eco_opp_cons$Genus_species
+
+# # comparative data
+comp_data <- comparative.data(phy = Petree, data = data1_soc_eco_opp_cons,
+                              names.col = Genus_species, vcv = TRUE,
+                              na.omit = FALSE, warn.dropped = TRUE , vcv.dim = 3)
+```
+
+
+```{r}
+
+# DAGs: all possible models (function from 00_socio_ecology_functions.R)
+models <- phylopath_DAGs()
+# plot 
+# plot(models$D1)
+
+
+# tree
+matches <- match(Petree$tip.label, data1_soc_eco_opp_cons$Genus_species, nomatch=0)
+not <- subset(Petree$tip.label, matches==0)
+tree_pruned_pa <- drop.tip(Petree, not)
+  
+  
+# run path analysis (with forcing an order):
+# result <- phylo_path(models, data = data1_PC_soc_eco_opp_out_pa, tree = tree_pruned_pa, order=c("PC1.Social.Opportunity","PC2.Social.Opportunity", "PC1.Ecological.Opportunity", "PC2.Ecological.Opportunity", "ResBrainBody_new","PC1.Social.consequences", "PC1.Ecological.consequences"))
+  
+#run path analysis (without forcing an order):
+#result <- phylo_path(models, data = data1_PC_soc_eco_opp_out_pa, tree = tree_pruned_pa)
+result <- phylo_path(models, data = data1_soc_eco_opp_cons, tree = tree_pruned_pa)
+
+# nice table
+smry.tab <- summary(result)[,-c(3,8,9)]
+rownames(smry.tab) <- NULL
+smry.tab %>%
+  kable_custom(caption = 'Phylogenetic path analysis. N = 29. Given are the number of conditional independencies (= number of d-separation statements) (k), C statistic (C), p-value (p), corrected C statistic information criterion (CICc) and the difference in the CICc (delta CICc) for each of the 28 candidate path models. Models A3 and A3 show the best goodness of fit (delta CICc < 3).') %>% 
+  row_spec(1:2, bold = T, color = "black", background = "lightgrey")
+
+# Extract and estimate the best supported model from a phylogenetic path analysis:
+# best_model <- best(result)
+A3 <- choice(result, 'A3')
+#plot(A3)
+# A3$coef
+# A3$coef - (1.96*A3$se) # lower 95% CI
+# A3$coef + (1.96*A3$se) # upper 95% CI
+
+A2 <- choice(result, 'A2')
+#plot(A2)
+# A2$coef
+# A2$coef - (1.96*A2$se) # lower 95% CI
+# A2$coef + (1.96*A2$se) # upper 95% CI
+
+# Extract and average the best supported models from a phylogenetic path analysis.
+average_model <- average(result, cut_off = 3)
+# xtable(average_model$coef)
+# xtable(average_model$lower)
+# xtable(average_model$upper)
+# plot(average_model)
+# plot(best_model)
+
+# Plot path coefficients and their confidence intervals or standard errors.
+# plot(average_model)
+# coef_plot(average_model)
+
+# Plot a directed acyclic graph with path coefficients.
+# plot.fitted_DAG()
+
+# Plot several causal hypothesis at once.
+# plot_model_set()
+```
+
+
+<br><br>
+
+
+```{r echo=FALSE, dpi = 50, fig.align = 'center', fig.cap = "Phylogenetic Path Analysis: Best fit models A3 (top) and A2 (bottom). Given are the standardized regression coefficients and the corresponding 95%-confidence intervals (CI). Significant coefficients (0 ∈/ CI) are indicated in bold."}
+knitr::include_graphics(path = 'Plots/Path_models_A3_A2.png')
+```
+
+<br>
+
+```{r echo=FALSE, dpi = 50, fig.align = 'center', fig.cap = "Phylogenetic Path Analysis. Average model, based on models A3 and A2."}
+knitr::include_graphics(path = 'Plots/Average_path_model.png')
+```
+
