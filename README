@@ -21,6 +21,6 @@ are newly saved in `02_socio_ecology_analyses.Rmd`.
 
 ## Data files
 
-* `appendix_primate_data_2.txt`: complete data set used for analyses.
+* `appendix_primate_data_3.txt`: complete data set used for analyses (with family names and HR size --> joined to original file with appendix_primate_data_2.txt).
 
 * `Perelman292res.nex`: phylogenetic tree by perelman. Probably manually adjusted by Karin Isler.
