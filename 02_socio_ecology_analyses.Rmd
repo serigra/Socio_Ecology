@@ -21,6 +21,7 @@ library(readxl)
 library(tidyverse)
 library(magrittr)
 library(patchwork)
+library(RColorBrewer)
 library(data.table)
 library(knitr)
 library(kableExtra)
@@ -176,7 +177,7 @@ tab.leave.one.out %>%
 ```{r, results='hide'}
 
 # choose variables to perform pPCA on:
-variables <- c('Predation risk', 'Mobility D-index', 'Env. seasonality',
+variables <- c('Predation risk', 'Mobility D-index', 'Home range size', 'Env. seasonality',
                '% insects and meat in diet', '% fruits and seeds in diet', '% leaves in diet', 
                'Extractive foraging', 'Diet quality', 'Substrate', 'Activity', 'Habitat')
 
@@ -284,9 +285,20 @@ data1_soc_eco_opp_long <- data1_soc_eco_opp %>%
                           labels = c('PC1 Social Opportunities', 'PC2 Social Opportunities',
                                     'PC1 Ecological Opportunities', 'PC2 Ecological Opportunities')
                           )
-         ) %>% 
-  left_join(data1[,c('Genus_species', 'family')], by = 'Genus_species')
+         )
 
+plot_dat_soc_eco_opp <- data1 %>% 
+  dplyr::select(Genus_species, family) %>%
+  left_join(data1_soc_eco_opp_long, by = 'Genus_species') %>% 
+  mutate(family = as.factor(family))
+
+plot_dat_soc_eco_opp <- plot_dat_soc_eco_opp[complete.cases(plot_dat_soc_eco_opp), ]
+
+# color coding families (see also further below)
+family_colors <- c(brewer.pal(n = 12, name = "Paired"), '#000000')
+names(family_colors) <- unique(data1$family)
+family_pch <- c(15, 17, 14, 4, 16, 13, 8, 10, 25, 11, 12, 7,  18)
+names(family_pch) <- unique(data1$family)
 
 labels <- data.frame(PC_type = c("PC1 Social Opportunities", "PC2 Social Opportunities",
                                "PC1 Ecological Opportunities", "PC2 Ecological Opportunities"),
@@ -300,15 +312,16 @@ labels <- data.frame(PC_type = c("PC1 Social Opportunities", "PC2 Social Opportu
 #                      slopes = jackknife_res$Jackknife.Summary[ 3:6, 'Original estimate']
 #                      )
 
-p.A.D <- data1_soc_eco_opp_long %>% 
+p.A.D <- plot_dat_soc_eco_opp %>% 
   ggplot(., aes(x = PC_values, y = ResBrainBody)) +
     geom_point(aes(color = family, shape = family), size = 2.5) + 
-    scale_shape_manual(values=c(15, 16, 17, 18, 11, 13, 8, 10, 25)) +
-    scale_color_brewer(palette="Paired") +
+    scale_shape_manual(values = family_pch, drop = FALSE ) +
+    scale_color_manual(values = family_colors, drop = FALSE)  +
+    #scale_color_brewer(palette="Paired") +
     geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
     #geom_abline(aes(intercept = intercept,  slope = slopes), data = slopes)  +
     labs(x = 'PC values', y = 'Residuals brain size') +
-    facet_wrap(~ PC_type) +
+    facet_wrap( ~ PC_type) +
     theme(panel.border = element_rect(fill = NA, colour = "black"),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
@@ -316,9 +329,9 @@ p.A.D <- data1_soc_eco_opp_long %>%
           strip.background = element_blank(),
           axis.line = element_line(colour = "grey"),
           legend.key = element_rect(fill = "white")
-          ) +
-    geom_text(x = -29, y = 0.55, aes(label = plot_labels), data = labels) +
-    geom_text(x =  25, y = -0.77, aes(label = pvalue_labels), data = labels)
+           ) +
+     geom_text(x = -29, y = 0.55, aes(label = plot_labels), data = labels) +
+     geom_text(x =  25, y = -0.77, aes(label = pvalue_labels), data = labels)
     
 
 ```
@@ -328,7 +341,7 @@ p.A.D <- data1_soc_eco_opp_long %>%
 
 ```{r jackknife}
 # jaccknife resampling
-set.seed(123)
+set.seed(111)
 jackknife_res <- jackknife_pgls(n_iter = 1000, 
                        subsample_size = 0.8, 
                        data = data1_soc_eco_opp, 
@@ -424,7 +437,7 @@ p.E.F <- dat_long %>%
   theme_density_2 +
   labs(x = 'Estimates') + 
   facet_wrap(~ paste0('PC ', PC) )  +
-  geom_text(x = -0.01, y = 220, aes(label = plot_labels), data = labels_EF)
+  geom_text(x = -0.004, y = 410, aes(label = plot_labels), data = labels_EF)
 
 ```
 
@@ -719,7 +732,7 @@ kable_pgls(model1)
 
 <br>
 
-```{r}
+```{r, fig.height = 2.8, fig.width = 8, fig.align = 'center', fig.cap = "Bivariate relationships between the first principal components of both the socio-cognitive (A) (Nspp.=60) and eco-cognitive (B) (Nspp.=53) consequences and relative brain size (residuals of log brain vs. log body) as well as the relationship between these two principal components (C) (Nspp.=32) (presented are raw, non-phylogenetically corrected data; slopes of regression lines and p-values are based on PGLS). Color codes are identical to those in Fig. 2."}
 
 data1_soc_cons <- merge(data1, pca.soc.cons$PC.scores, by="Genus_species", all.x=T) %>% 
   dplyr::select(family, Genus_species, Brain.Size, Body.Mass, PC1.Social.Consequence) %>% 
@@ -728,23 +741,32 @@ data1_soc_cons <- merge(data1, pca.soc.cons$PC.scores, by="Genus_species", all.x
 # add residuals to data set for plotting
 data1_soc_cons$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_soc_cons, na.action=na.exclude))
 
+# color coding families (see also above)
+family_colors <- c(brewer.pal(n = 12, name = "Paired"), '#000000')
+names(family_colors) <- unique(data1$family)
+family_pch <- c(15, 17, 14, 4, 16, 13, 8, 10, 25, 11, 12, 7,  18)
+names(family_pch) <- unique(data1$family)
 
 plot.soc.cons <- data1_soc_cons %>% 
  ggplot(., aes(x = ResBrainBody, y = PC1.Social.Consequence)) +
     geom_point(aes(color = family, shape = family), size = 2.5) + 
-    scale_shape_manual(values=c(15, 16, 17, 18, 11, 13, 8, 10, 25, 10, 12, 7, 4)) +
-    scale_color_manual(values = c(brewer.pal(n = 12, name = "Paired"), '#000000')) +
+    scale_shape_manual(values = family_pch) +
+    scale_color_manual(values = family_colors) +
     geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
-    labs(x = 'Residuals brain size', y = 'PC 1 social consequences') +
+    labs(x = 'Residuals brain size', 
+         y = 'PC 1 social consequences',
+         title = 'p = 0.004') +
+    scale_y_continuous(limits=c(-10, 65)) +
     theme(panel.border = element_rect(fill = NA, colour = "black"),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           strip.background = element_blank(),
-          axis.line = element_line(colour = "grey"),
-          legend.key = element_rect(fill = "white")
+          axis.line = element_line(colour = "black"),
+          legend.position = "none",
+          plot.title = element_text(hjust = 0.5)
           ) +
-    geom_text(x = -0.81, y = 60, label = 'A')
+    geom_text(x = -0.75, y = 61, label = 'A')
 
 
 
@@ -760,19 +782,23 @@ data1_eco_cons$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), da
 plot.eco.cons <- data1_eco_cons %>% 
  ggplot(., aes(x = ResBrainBody, y = PC1.Ecological.Consequence)) +
     geom_point(aes(color = family, shape = family), size = 2.5) + 
-    scale_shape_manual(values=c(15, 16, 17, 18, 11, 13, 8, 10, 25, 10, 12, 7, 4)) +
-    scale_color_manual(values = c(brewer.pal(n = 12, name = "Paired"), '#000000')) +
+    scale_shape_manual(values = family_pch) +
+    scale_color_manual(values = family_colors) +
     geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
-    labs(x = 'Residuals brain size', y = 'PC1 ecological consequences') +
+    labs(x = 'Residuals brain size',
+         y = 'PC1 ecological consequences',
+        title = 'p = 0.002') +
+   scale_y_continuous(limits=c(-10, 65)) +
     theme(panel.border = element_rect(fill = NA, colour = "black"),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           strip.background = element_blank(),
-          axis.line = element_line(colour = "grey"),
-          legend.key = element_rect(fill = "white")
+          axis.line = element_line(colour = "black"),
+          legend.position = "none",
+          plot.title = element_text(hjust = 0.5)
           ) +
-    geom_text(x = -0.75, y = 37, label = 'B') 
+    geom_text(x = -0.75, y = 61, label = 'B') 
 
 
 
@@ -780,19 +806,23 @@ plot.soc.eco.cons <- data1_soc_eco_cons %>%
   left_join(data1[,c("family", 'Genus_species')], by = 'Genus_species') %>% 
  ggplot(., aes(x = PC1.Ecological.Consequence, y = PC1.Social.Consequence)) +
     geom_point(aes(color = family, shape = family), size = 2.5) + 
-    scale_shape_manual(values=c(15, 16, 17, 18, 11, 13, 8, 10, 25, 10, 12, 7, 4)) +
-    scale_color_manual(values = c(brewer.pal(n = 12, name = "Paired"), '#000000')) +
+    scale_shape_manual(values = family_pch) +
+    scale_color_manual(values = family_colors) +
     geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
-    labs(x = 'PC1 ecological consequences', y = 'PC1 social consequences') +
+    labs(x = 'PC1 ecological consequences',
+         y = 'PC1 social consequences',
+         title = 'p < 0.001') +
+    scale_y_continuous(limits=c(-10, 65)) +
     theme(panel.border = element_rect(fill = NA, colour = "black"),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           strip.background = element_blank(),
-          axis.line = element_line(colour = "grey"),
-          legend.key = element_rect(fill = "white")
+          axis.line = element_line(colour = "black"),
+          legend.position = "none",
+          plot.title = element_text(hjust = 0.5)
           ) +
-    geom_text(x = -8, y = 59, label = 'C') 
+    geom_text(x = -8, y = 61, label = 'C') 
 
 
 plot.soc.cons + plot.eco.cons + plot.soc.eco.cons
