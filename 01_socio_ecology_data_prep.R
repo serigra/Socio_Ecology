@@ -10,11 +10,32 @@
 
 
 # read in data
-data <- read.table(file.path(rprojroot::find_rstudio_root_file(), "Data/appendix_primate_data_2.txt"), 
+data <- read.table(file.path(rprojroot::find_rstudio_root_file(), "Data/appendix_primate_data_3.txt"), 
                    header=T,
                    sep="\t", 
                    fill=T, 
                    stringsAsFactors = FALSE)
+
+
+# # join data on hr size (to original file appendix_primate_data_2.txt)
+# hrsize <- read.csv(file.path(rprojroot::find_rstudio_root_file(), "Data/HRsize.csv"),
+#                    header=T,
+#                    sep=";")
+# 
+# data %<>%
+#   left_join(hrsize, by = 'Genus_species')
+# 
+# 
+# # join family names for each species (to original file appendix_primate_data_2.txt)
+# family_primates <- read.csv(file.path(rprojroot::find_rstudio_root_file(), "Data/Species_family.csv"),
+#                             stringsAsFactors=FALSE)
+# data <- data %>%
+#   left_join(family_primates[, c("Genus_species", 'family')], by = "Genus_species") %>%
+#   mutate(family = replace_na(family, 'unknown'))
+# 
+# write.table(data, file = 'Data/appendix_primate_data_3.txt', sep = '\t')
+
+
 
 # grep all variables which do not contain "reference":
 data <- data[,-grep("Reference", colnames(data))]
@@ -29,6 +50,7 @@ data$ResBrainBody <- residuals(m1 <- lm(log(Morph1.Brain.size.combined) ~ log(Mo
 data$Eco2.tool.use.wo.c <- ifelse(data$Eco2.Tool.use..Bentley.Condit.and.Smith.2010. >1, 1,0)
 data$Eco2.tool.use.w.c <- ifelse(data$Eco2.Tool.use..Bentley.Condit.and.Smith.2010. >=1, 1,0)
 data$Soc2.Food.sharing.adults <- ifelse(data$Soc2.FS.adult..Jaeggi.and.van.Schaik.2011. >=1, 1,0)
+
 
 
 # rename species in data to match with names in phylogenetic tree
@@ -57,13 +79,6 @@ levels(data$Genus_species)[levels(data$Genus_species)=="Callithrix_humeralifer"]
 #levels(data$Genus_species)[levels(data$Genus_species)=="Presbytis_rubicunda"] <- "Presbytis_comata"
 #levels(data$Genus_species)[levels(data$Genus_species)=="Presbytis_potenziani"] <- "Presbytis_melalophos"
 
-
-# add family names for each species
-family_primates <- read.csv("~/Documents/University/PhD/Social vs. ecological factor in brain size evolution/2020_Analyses/Data/Species_family.csv",
-                            stringsAsFactors=FALSE)
-data <- data %>% 
-          left_join(family_primates[, c("Genus_species", 'family')], by = "Genus_species") %>% 
-          mutate(family = replace_na(family, 'unknown'))
 
 
 

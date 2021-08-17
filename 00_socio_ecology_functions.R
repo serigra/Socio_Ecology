@@ -142,6 +142,7 @@ rename_vars <- function(dat){
   dat %<>%
     rename(`Predation risk` = Eco1.Predation.risk..Nunn.and.van.Schaik.2000.,
            `Mobility D-index` = Eco1.mobility.1..Dindex.combined,
+           `Home range size` = Eco1.HRsize,
            `Env. seasonality` = Eco1.CV.NDVI..Janneke.Karin.data.final.,
            `% insects and meat in diet` = Eco1.Proportion.animal.combined,
            `% fruits and seeds in diet` = Eco1.Proportion.fruits.and.seeds..Janneke.data.,
@@ -623,7 +624,7 @@ extract_estimates <- function(formula, data, tree_pruned, minus_coef = c(1,2)) {
     
     prior <- list(R = list(V = 1, nu = 0.002), G = list(G1 = list(V = 1, nu = 0.002)))
     names(data)[1] <- "animal"
-    model <- MCMCglmm(as.formula(formulas), random = ~animal, data = data, 
+    model <- MCMCglmm(as.formula(formula), random = ~animal, data = data, 
                       pedigree = tree_pruned, prior = prior, pr = F, scale = F,saveX = F, nitt = 30000)
     names(data)[1] <- "Genus_species"
     est_p <- data.frame(summary(model)$solutions[, c(1,5)])
