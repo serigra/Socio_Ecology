@@ -311,7 +311,7 @@ phylo_pca <- function(vars, data, tree, type = NULL, invert.loading = NULL) {
 #                 kable table for phylogenetic PCA loadings
 ###-----------------------------------------------------------------------------
 
-kable_phylo_pca_loadings <- function(pca_loadings){
+kable_phylo_pca_loadings <- function(pca_loadings, N = NULL){
   
   # Generates nice output table for PCA loadings
   #
@@ -319,7 +319,9 @@ kable_phylo_pca_loadings <- function(pca_loadings){
   #     pca_loading = output from phylo_pca() --> e.g. pca.soc.opp$PC.loadings
   
   type <- attributes(pca_loadings)$type
-  N <- attributes(pca_loadings)$N
+  if(is.null(N)){
+    N <- attributes(pca_loadings)$N
+  } else{ N = N }
   
   pca_loadings %>% 
     round(., digits = 4) %>% 
