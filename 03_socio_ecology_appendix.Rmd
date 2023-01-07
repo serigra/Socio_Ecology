@@ -132,36 +132,15 @@ kable_phylo_pca_loadings(pca.soc.opp$PC.loadings)
 
 <br><br>
 
-### PGLS with PC scores
-```{r}
-# add individual PC scores to data set
-data1_soc_opp <- merge(data1, pca.soc.opp$PC.scores, by = "Genus_species", all.x = T)
-# add residuals to data set for plotting
-data1_soc_opp$ResBrainBody <- resid(m1 <- lm(log(Brain.Size) ~ log(Body.Mass), data = data1_soc_opp, na.action = na.exclude))
 
-# comparative data for PGLS
-comp_data <- comparative.data(phy = Petree, data = data1_soc_opp, names.col = Genus_species, 
-                              vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim = 3)
-
-# PGLS analyses
-model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity, data = comp_data, lambda = 'ML')
-kable_pgls(model1)
-model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity, data = comp_data, lambda = 'ML')
-kable_pgls(model1)
-model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Social.Opportunity, data = comp_data, lambda = 'ML')
-kable_pgls(model1)
-
-```
-
-<br><br>
 
 ### PGLS with pPCAs where systematically each of the variables is left out 
 
 ```{r , results = 'hide'}
 tab.leave.one.out <- leave_one_out(vars = variables, 
-                                     data = data1, 
-                                     tree = Petree,
-                                     type = 'Social Opportunity')
+                                   data = data1, 
+                                   tree = Petree,
+                                   type = 'Social Opportunity')
 ```
 
 ```{r socopploo}
@@ -189,34 +168,12 @@ pca.eco.opp <- phylo_pca(vars = variables,
                          invert.loading = 'PC1')
 ```
 
-
-
 ```{r}
 # output table PCA
 kable_phylo_pca_loadings(pca.eco.opp$PC.loadings)
 ```
 
-<br><br>
 
-### PGLS with PC scores
-```{r}
-# add individual PC scores to data set
-data1_eco_opp <- merge(data1, pca.eco.opp$PC.scores, by = "Genus_species", all.x = T)
-# add residuals to data set for plotting
-data1_eco_opp$ResBrainBody <- resid(m1 <- lm(log(Brain.Size) ~ log(Body.Mass), data = data1_eco_opp, na.action = na.exclude))
-
-# comparative data for PGLS
-comp_data <- comparative.data(phy = Petree, data = data1_eco_opp, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim = 3)
-
-# PGLS analyses
-model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity, data = comp_data, lambda = 'ML')
-kable_pgls(model1)
-model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Ecological.Opportunity, data = comp_data, lambda = 'ML')
-kable_pgls(model1)
-model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data, lambda='ML')
-kable_pgls(model1)
-
-```
 
 <br><br>
 
@@ -269,89 +226,20 @@ tree_pruned_soc_eco_opp <- drop.tip(Petree, not)
 ```
 
 
-```{r plot regression opportunities}
-
-# plot for paper (Figure 2, A-D)
-
-data1_soc_eco_opp_long <- data1_soc_eco_opp %>% 
-                                pivot_longer(
-                                 cols = starts_with("PC"),
-                                 names_to = "PC_type",
-                                 names_prefix = "",
-                                 values_to = "PC_values",
-                                 values_drop_na = TRUE
-                               ) %>% 
-  mutate(PC_type = factor(x = PC_type, 
-                          levels = c('PC1.Social.Opportunity', 'PC2.Social.Opportunity',
-                                     'PC1.Ecological.Opportunity', 'PC2.Ecological.Opportunity'),
-                          labels = c('PC1 Social Opportunities', 'PC2 Social Opportunities',
-                                    'PC1 Ecological Opportunities', 'PC2 Ecological Opportunities')
-                          )
-         )
-
-plot_dat_soc_eco_opp <- data1 %>% 
-  dplyr::select(Genus_species, family) %>%
-  left_join(data1_soc_eco_opp_long, by = 'Genus_species') %>% 
-  mutate(family = as.factor(family))
-
-plot_dat_soc_eco_opp <- plot_dat_soc_eco_opp[complete.cases(plot_dat_soc_eco_opp), ]
-
-# color coding families (see also further below)
-family_colors <- c(brewer.pal(n = 12, name = "Paired"), '#000000')
-names(family_colors) <- unique(data1$family)
-family_pch <- c(15, 17, 14, 4, 16, 13, 8, 10, 25, 11, 12, 7,  18)
-names(family_pch) <- unique(data1$family)
-
-labels <- data.frame(PC_type = c("PC1 Social Opportunities", "PC2 Social Opportunities",
-                               "PC1 Ecological Opportunities", "PC2 Ecological Opportunities"),
-                       plot_labels = c("A", "B", "C", "D"),
-                       pvalue_labels = c("p = 0.442", "p = 0.699", "p = 0.024", "p = 0.089")
-                       )
-
-# slopes <- data.frame(PC_type = c("PC1 Social Opportunities", "PC2 Social Opportunities",
-#                                "PC1 Ecological Opportunities", "PC2 Ecological Opportunities"),
-#                      intercept = jackknife_res$Jackknife.Summary['(Intercept)', 'Original estimate'],
-#                      slopes = jackknife_res$Jackknife.Summary[ 3:6, 'Original estimate']
-#                      )
-
-p.A.D <- plot_dat_soc_eco_opp %>% 
-  ggplot(., aes(x = PC_values, y = ResBrainBody)) +
-    geom_point(aes(color = family, shape = family), size = 2.5) + 
-    scale_shape_manual(values = family_pch, drop = FALSE ) +
-    scale_color_manual(values = family_colors, drop = FALSE)  +
-    #scale_color_brewer(palette="Paired") +
-    geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
-    #geom_abline(aes(intercept = intercept,  slope = slopes), data = slopes)  +
-    labs(x = 'PC values', y = 'Residuals brain size') +
-    facet_wrap( ~ PC_type) +
-    theme(panel.border = element_rect(fill = NA, colour = "black"),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_blank(),
-          strip.background = element_blank(),
-          axis.line = element_line(colour = "grey"),
-          legend.key = element_rect(fill = "white")
-           ) +
-     geom_text(x = -29, y = 0.55, aes(label = plot_labels), data = labels) +
-     geom_text(x =  25, y = -0.77, aes(label = pvalue_labels), data = labels)
-    
-
-```
-
-
 
 
 ```{r jackknife}
 # jaccknife resampling
-set.seed(111)
-jackknife_res <- jackknife_pgls(n_iter = 1000, 
-                       subsample_size = 0.8, 
-                       data = data1_soc_eco_opp, 
-                       response = "log(Brain.Size)", 
-                       predictors = c("PC1.Social.Opportunity", "PC2.Social.Opportunity",
-                                      "PC1.Ecological.Opportunity", "PC2.Ecological.Opportunity"), 
-                       opp = TRUE)
+# set.seed(111)
+# jackknife_res <- jackknife_pgls(n_iter = 1000, 
+#                                 subsample_size = 0.8, 
+#                                 data = data1_soc_eco_opp, 
+#                                 response = "log(Brain.Size)", 
+#                                 predictors = c("PC1.Social.Opportunity", "PC2.Social.Opportunity",
+#                                                "PC1.Ecological.Opportunity", "PC2.Ecological.Opportunity"), 
+#                                opp = TRUE)
 
+load('jackknife.Rda')
 
 # make nice output table
 jackknife_res$Jackknife.Summary %>% 
@@ -361,100 +249,8 @@ jackknife_res$Jackknife.Summary %>%
 
 <br>
 
-```{r plot jackknife distribution}
 
-dat <- jackknife_res$Jackknife.Estimates
-dat <- as.data.frame(dat[!dat[,1] == 999, ])
-
-
-# Plot for paper (Figure 2 E, F)
-
-### ============================ PLOT VERSION 1 ================================
-
-# theme_density <- theme(
-#         axis.title = element_text(size = 13, color = "black"),
-#         axis.text.x  = element_text(vjust = 0.5, size = 12),
-#         axis.text.y = element_text(vjust = 0.5, size = 13),
-#         panel.border = element_rect(fill = NA, size = 2),
-#         #plot.title = element_text(size = 20),
-#         panel.background = element_blank(),
-#         strip.background = element_blank(),
-#         legend.position = c(0.78, 0.7),
-#         legend.title = element_blank(),
-#         legend.text = element_text(size = 11))
-
-# PC1
-# p.pc1 <- ggplot(data = dat) +
-#   geom_density(aes(x = PC1.Ecological.Opportunity, fill = 'ecological opp.'),  alpha = 0.5) +
-#   geom_density(aes(x = PC1.Social.Opportunity, fill = 'social opp.'), alpha = 0.5) +
-#   scale_fill_manual( values = c("olivedrab4","steelblue3")) +
-#   theme_2 +
-#   labs(x = 'Estimates PC1')
-# 
-# # PC2 
-# p.pc2 <- ggplot(data = dat) +
-#   geom_density(aes(x = PC2.Ecological.Opportunity, fill = "ecological opp."), alpha = 0.5) +
-#   geom_density(aes(x = PC2.Social.Opportunity, fill = "social opp."), alpha = 0.5) +
-#   scale_fill_manual( values = c("olivedrab4","steelblue3")) +
-#   theme_2 +
-#   labs(x = 'Estimates PC2')
-
-# p.pc1 + p.pc2 + 
-#   plot_annotation(title = '1000 Jackknife replicates of combined plgs model', tag_levels = 'A') &
-#   theme(plot.title = element_text(size = 16), 
-#         plot.tag = element_text(size = 14))
-
-
-
-### ============================ PLOT VERSION 2 ================================
-
-theme_density_2 <- theme(panel.border = element_rect(fill = NA, colour = "black"),
-                panel.grid.major = element_blank(),
-                panel.grid.minor = element_blank(),
-                panel.background = element_blank(),
-                strip.background = element_blank(),
-                #legend.position = c(0.85, 0.85),
-                axis.line = element_line(colour = "grey"),
-                legend.key = element_rect(fill = "white"),
-                legend.title=element_blank()
-                )
-
-dat_long <- dat %>% 
-                pivot_longer(cols = starts_with("PC"),
-                             names_to = "PC_type",
-                             names_prefix = "PC",
-                             values_to = "PC_values",
-                             values_drop_na = TRUE) %>% 
-                separate(PC_type, c("PC", "Opportunity_type")) %>% 
-                pivot_wider(names_from = 'Opportunity_type', values_from = 'PC_values') 
-
-labels_EF <- data.frame(PC = c("1", "2"),
-                        plot_labels = c("E", "F"))
-
-p.E.F <- dat_long %>% 
-  ggplot(.) +
-  geom_density(aes(x = Ecological, fill = "ecological opp."), alpha = 0.5) +
-  geom_density(aes(x = Social, fill = "social opp."), alpha = 0.5) +
-  scale_fill_manual( values = c("olivedrab4","steelblue3")) +
-  theme_density_2 +
-  labs(x = 'Estimates') + 
-  facet_wrap(~ paste0('PC ', PC) )  +
-  geom_text(x = -0.004, y = 410, aes(label = plot_labels), data = labels_EF)
-
-```
-
-```{r figure 2, fig.height = 8, fig.align = 'center', fig.cap = "Unidirectional Analysis: PGLS on Opportunities. Bivariate relationships between relative brain size (residuals of log brain vs. log body) and the principal components of the social (A, B) and ecological (C, D) opportunities (N=43; presented are raw, non-phylogenetically corrected data; p-values are based on the PGLS regression model). Density distributions are the result of 1,000 jackknife resampling replicates of PGLS regression estimates (E, F; Table 2.7)"}
-
-### ========================= PUT PLOTS INTO ONE PLOT  =========================
-
-p.A.D + p.E.F +
-  plot_layout(ncol = 1, heights = c(2,1))
-
-```
-
-<br>
-
-```{r AIC model comparison I, results = 'hide'}
+```{r AIC_model_comparison_I, results = 'hide'}
 
 formulas <- c('log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Social.Opportunity',
               'log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity',
@@ -472,7 +268,10 @@ tab_estimates <- do.call('rbind',
                          )
 ```
 
-```{r AIC model comparison II}
+<br>
+
+
+```{r AIC_model_comparison_II}
 # restructure table
 tab_estimates %<>% 
   mutate(value = paste0(round(estimate, 3), ' (', round(`p-value`, 3), ')')) %>% 
@@ -489,7 +288,7 @@ colnames(tab_estimates) <- gsub('Opportunity', 'Opp.', colnames(tab_estimates))
   
 # nice output table
 tab_estimates %>% 
-  kable_custom(., caption = paste0('Model selection based on Akaike Information Criterion (AIC). PGLS models with log brain size as the response and the social and ecological opportunity PCs as predictor variables. Models are based on the common sample of social and ecological opportunities (', nrow(data1_soc_eco_opp)  ,') and include log body mass as a covariate. Given are the estimates and corresponding p-values in brackets.'))
+  kable_custom(., caption = paste0('Model selection based on Akaike Information Criterion (AIC). PGLS models with log brain size as the response and the social and ecological opportunity PCs as predictor variables. Models are based on the common sample of social and ecological opportunities (N = ', nrow(data1_soc_eco_opp)  ,') and include log body mass as a covariate. Given are the estimates and corresponding p-values in brackets.'))
 ```
 
 
@@ -497,7 +296,7 @@ tab_estimates %>%
 
 
 ## Relationship between social and ecological opportunities
-```{r relationship social and ecological opps, results = 'hide'}
+```{r relationship_social_and_ecological_opps, results = 'hide'}
 
 formulas_rel <- c('PC1.Social.Opportunity ~ PC1.Ecological.Opportunity',
               'PC2.Social.Opportunity ~ PC2.Ecological.Opportunity',
@@ -524,7 +323,6 @@ tab_estimates_rel %<>%
 
 rownames(tab_estimates_rel) <- NULL
 
-
 ```
 
 
@@ -532,7 +330,9 @@ rownames(tab_estimates_rel) <- NULL
 ```{r}
 # nice output table
 tab_estimates_rel %>% 
-  kable_custom(., caption = paste0('Relationships between social and ecological opportunity PCs. PGLS models are based on the common sample of social and ecological opportunity variables ($N=43$). Given are the estimates and corresponding p-values.'))
+  kable_custom(., caption = paste0('Relationships between social and ecological opportunity PCs. PGLS models are based on the common sample of social and ecological opportunity variables ($N=43$). Given are the estimates and corresponding p-values.')) %>% 
+  pack_rows("Social Opportunities", 1, 4) %>%
+  pack_rows("Ecological Opportunities", 5, 8)
 ```
 
 
@@ -564,26 +364,6 @@ kable_phylo_pca_loadings(pca.soc.cons$PC.loadings)
 
 <br><br>
 
-### PGLS with PC scores
-```{r}
-# add individual PC scores to data set
-data1_PC <- merge(data1, pca.soc.cons$PC.scores, by="Genus_species", all.x=T)
-# add residuals to data set for plotting
-data1_PC$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_PC, na.action=na.exclude))
-
-# comparative data for PGLS
-comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
-
-# PGLS analyses
-model1 <- pgls(PC1.Social.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
-kable_pgls(model1)
-model1 <- pgls(PC2.Social.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
-kable_pgls(model1)
-
-```
-
-<br><br>
-
 ### PGLS with pPCAs where systematically each of the variables is left out 
 
 ```{r, results = 'hide'}
@@ -593,6 +373,7 @@ tab.leave.one.out <- leave_one_out(vars = variables, data = data1, tree = Petree
 ```{r socconsloo}
 tab.leave.one.out %>% 
   round(., digits = 4) %>% 
+  dplyr::select(estimate, p.value) %>% 
   kable_custom(., caption = 'Estimates and p-values of the effects of brain size on PC1 of the social consequences (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
 ```
 
@@ -601,6 +382,8 @@ tab.leave.one.out %>%
 ### PGLS excluding outliers - *Cebus capucinus*, *Cebus apella*, *Pan troglodytes*
 
 ```{r socconsexcl}
+# add individual PC scores to data set
+data1_PC <- merge(data1, pca.soc.cons$PC.scores, by="Genus_species", all.x=T)
 
 # exclude outliers
 data1_PC_excl <- data1_PC %>%
@@ -643,25 +426,6 @@ pca.eco.cons <- phylo_pca(vars = variables,
 kable_phylo_pca_loadings(pca.eco.cons$PC.loadings)
 ```
 
-<br><br>
-
-### PGLS with PC scores
-```{r}
-# add individual PC scores to data set
-data1_PC <- merge(data1, pca.eco.cons$PC.scores, by="Genus_species", all.x=T)
-# add residuals to data set for plotting
-data1_PC$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_PC, na.action=na.exclude))
-
-# comparative data for PGLS
-comp_data <- comparative.data(phy = Petree, data = data1_PC, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
-
-# PGLS analyses
-model1 <- pgls(PC1.Ecological.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
-kable_pgls(model1)
-model1 <- pgls(PC2.Ecological.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data, lambda='ML')
-kable_pgls(model1)
-
-```
 
 <br><br>
 
@@ -674,6 +438,7 @@ tab.leave.one.out <- leave_one_out(vars = variables, data = data1, tree = Petree
 ```{r ecoconsloo}
 tab.leave.one.out %>% 
   round(., digits = 4) %>% 
+  dplyr::select(estimate, p.value) %>% 
   kable_custom(., caption = 'Estimates and p-values of the effects of brain size on PC1 of the ecological consequences (mulitple PGLS regression). In the first row the result of the original analysis is given, in the subsequent rows, the results are based on PCs from pPCAs where systematically each of the variable is left out.')
 ```
 
@@ -681,6 +446,10 @@ tab.leave.one.out %>%
 
 ### PGLS excluding outliers - *Cebus capucinus*, *Cebus apella*, *Pan troglodytes*
 ```{r ecoconsexcl}
+
+# add individual PC scores to data set
+data1_PC <- merge(data1, pca.eco.cons$PC.scores, by="Genus_species", all.x=T)
+
 # exclude outliers
 data1_PC_excl <- data1_PC %>%
                     filter(!Genus_species %in% c("Cebus_capucinus", "Cebus_apella", "Pan_troglodytes"))
@@ -729,114 +498,19 @@ model1 <- pgls(PC1.Social.Consequence ~  PC1.Ecological.Consequence + log(Body.M
                data = comp_data, 
                lambda='ML') 
 kable_pgls(model1)
+```
 
 
+```{r}
 model1 <- pgls(PC1.Ecological.Consequence ~ PC1.Social.Consequence + log(Body.Mass) + log(Brain.Size),
                data = comp_data, 
                lambda='ML') 
 kable_pgls(model1)
 ```
 
+
+
 <br>
-
-```{r, fig.height = 2.8, fig.width = 8, fig.align = 'center', fig.cap = "Bivariate relationships between the first principal components of both the socio-cognitive (A) (Nspp.=60) and eco-cognitive (B) (Nspp.=53) consequences and relative brain size (residuals of log brain vs. log body) as well as the relationship between these two principal components (C) (Nspp.=32) (presented are raw, non-phylogenetically corrected data; slopes of regression lines and p-values are based on PGLS). Color codes are identical to those in Fig. 2."}
-
-data1_soc_cons <- merge(data1, pca.soc.cons$PC.scores, by="Genus_species", all.x=T) %>% 
-  dplyr::select(family, Genus_species, Brain.Size, Body.Mass, PC1.Social.Consequence) %>% 
-  filter(complete.cases(.))
-
-# add residuals to data set for plotting
-data1_soc_cons$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_soc_cons, na.action=na.exclude))
-
-# color coding families (see also above)
-family_colors <- c(brewer.pal(n = 12, name = "Paired"), '#000000')
-names(family_colors) <- unique(data1$family)
-family_pch <- c(15, 17, 14, 4, 16, 13, 8, 10, 25, 11, 12, 7,  18)
-names(family_pch) <- unique(data1$family)
-
-plot.soc.cons <- data1_soc_cons %>% 
- ggplot(., aes(x = ResBrainBody, y = PC1.Social.Consequence)) +
-    geom_point(aes(color = family, shape = family), size = 2.5) + 
-    scale_shape_manual(values = family_pch) +
-    scale_color_manual(values = family_colors) +
-    geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
-    labs(x = 'Residuals brain size', 
-         y = 'PC 1 social consequences',
-         title = 'p = 0.004') +
-    scale_y_continuous(limits=c(-10, 65)) +
-    theme(panel.border = element_rect(fill = NA, colour = "black"),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_blank(),
-          strip.background = element_blank(),
-          axis.line = element_line(colour = "black"),
-          legend.position = "none",
-          plot.title = element_text(hjust = 0.5)
-          ) +
-    geom_text(x = -0.75, y = 61, label = 'A')
-
-
-
-
-
-data1_eco_cons <- merge(data1, pca.eco.cons$PC.scores, by="Genus_species", all.x=T) %>% 
-  dplyr::select(family, Genus_species, Brain.Size, Body.Mass, PC1.Ecological.Consequence) %>% 
-  filter(complete.cases(.))
-
-# add residuals to data set for plotting
-data1_eco_cons$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_eco_cons, na.action=na.exclude))
-
-plot.eco.cons <- data1_eco_cons %>% 
- ggplot(., aes(x = ResBrainBody, y = PC1.Ecological.Consequence)) +
-    geom_point(aes(color = family, shape = family), size = 2.5) + 
-    scale_shape_manual(values = family_pch) +
-    scale_color_manual(values = family_colors) +
-    geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
-    labs(x = 'Residuals brain size',
-         y = 'PC1 ecological consequences',
-        title = 'p = 0.002') +
-   scale_y_continuous(limits=c(-10, 65)) +
-    theme(panel.border = element_rect(fill = NA, colour = "black"),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_blank(),
-          strip.background = element_blank(),
-          axis.line = element_line(colour = "black"),
-          legend.position = "none",
-          plot.title = element_text(hjust = 0.5)
-          ) +
-    geom_text(x = -0.75, y = 61, label = 'B') 
-
-
-
-plot.soc.eco.cons <- data1_soc_eco_cons %>%
-  left_join(data1[,c("family", 'Genus_species')], by = 'Genus_species') %>% 
- ggplot(., aes(x = PC1.Ecological.Consequence, y = PC1.Social.Consequence)) +
-    geom_point(aes(color = family, shape = family), size = 2.5) + 
-    scale_shape_manual(values = family_pch) +
-    scale_color_manual(values = family_colors) +
-    geom_smooth(method='lm', se = FALSE, color = 'darkgray') + 
-    labs(x = 'PC1 ecological consequences',
-         y = 'PC1 social consequences',
-         title = 'p < 0.001') +
-    scale_y_continuous(limits=c(-10, 65)) +
-    theme(panel.border = element_rect(fill = NA, colour = "black"),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_blank(),
-          strip.background = element_blank(),
-          axis.line = element_line(colour = "black"),
-          legend.position = "none",
-          plot.title = element_text(hjust = 0.5)
-          ) +
-    geom_text(x = -8, y = 61, label = 'C') 
-
-
-plot.soc.cons + plot.eco.cons + plot.soc.eco.cons
-```
-
-
-<br><br>
 
 
 ### Excluding outliers - *Cebus capucinus*, *Cebus apella*, *Pan troglodytes*
@@ -869,13 +543,13 @@ kable_pgls(model1)
 ```
 
 
-
 ```{r socecoconsexcl3}
 model1 <- pgls(PC1.Ecological.Consequence ~ PC1.Social.Consequence,
                data = comp_data_excl, 
                lambda='ML') 
 kable_pgls(model1)
 ```
+
 
 ```{r socecoconsexcl4}
 model1 <- pgls(PC1.Ecological.Consequence ~ PC1.Social.Consequence + log(Body.Mass) + log(Brain.Size),
@@ -886,13 +560,14 @@ kable_pgls(model1)
 ```
 
 
+
+
 <br><br>
 
 
 
 ## Reclassification of opportunities to consequences: fission-fusion and extractive foraging
 
-<br> 
 
 Reclassifiying fission-fusion and extractive foraging as consequence variables made the original results even stronger. 
 The factor loadings of pPCA on the *opportunity* variables are equivalent to the original analysis (Tables \@ref(tab:socoppalt), \@ref(tab:ecooppalt)),
@@ -901,15 +576,9 @@ driving brain size evolution. In fact, whereas the social opportunity PCs show n
 
 <br> 
 
-Also in case of the *consequences*, the pPCA as well as the subsequent PGLS regressions result in equivalent patterns as the original analysis. For the ecological and social domain, all variables load highly on the first PC (Tables \@ref(tab:socconsalt), \@ref(tab:ecoconsalt)), and relative brain size shows strong effects on both, the social and ecological consequence PC (socio-cognitive PC1 PGLS: N = 55, λ = 0.00, β Brain = 16.393 (p = 0.007); eco-cognitive PC1 PGLS: N = 53, λ = 0.91, β Brain = 20.033 (p = 0.015); eco-cognitive PC2 PGLS: N = 53, λ = 0.00, β Brain = 17.910 (p < 0.001)). Also the relationsip between the social and ecological consequence PCs is highly significant (PGLS: N = 31, λ = 0.00, β PC1 Ecological Cons. = 0.889 (p < 0.001)), whereas there is no relationship between the opportunity PCs (results not shown).
 
 
-<br><br> 
-
-
-### Social opportunities
-
-**Phylogenetic PCA**
+**Phylogenetic PCA social opportunities**
 ```{r, results='hide'}
 
 # choose variables to perform pPCA on --> wihtout fission fusion
@@ -928,39 +597,15 @@ pca.soc.opp.alt <- phylo_pca(vars = variables,
 
 ```{r socoppalt}
 # output table PCA
-kable_phylo_pca_loadings(pca.soc.opp.alt$PC.loadings)
-```
-
-<br><br>
-
-**PGLS with PC scores**
-```{r}
-# add individual PC scores to data set
-data1_soc_opp.alt <- merge(data1, pca.soc.opp.alt$PC.scores, by = "Genus_species", all.x = T)
-# add residuals to data set for plotting
-data1_soc_opp.alt$ResBrainBody <- resid(m1 <- lm(log(Brain.Size) ~ log(Body.Mass), data = data1_soc_opp.alt, na.action = na.exclude))
-
-# comparative data for PGLS
-comp_data.alt <- comparative.data(phy = Petree, data = data1_soc_opp.alt, names.col = Genus_species, 
-                              vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim = 3)
-
-# PGLS analyses
-# model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity, data = comp_data.alt, lambda = 'ML')
-# kable_pgls(model1)
-# model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Social.Opportunity, data = comp_data.alt, lambda = 'ML')
-# kable_pgls(model1)
-model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Social.Opportunity + PC2.Social.Opportunity, data = comp_data.alt, lambda = 'ML')
-kable_pgls(model1)
-
+kable_phylo_pca_loadings(pca.soc.opp.alt$PC.loadings[, c(1,2)],
+                         N = attributes(pca.soc.opp.alt$PC.loadings)$N)
 ```
 
 
-<br><br>
+<br> 
 
 
-### Ecological opportunities
-
-**Phylogenetic PCA**
+**Phylogenetic PCA ecological opportunities**
 ```{r, results='hide'}
 
 # choose variables to perform pPCA on:
@@ -971,75 +616,29 @@ variables <- c('Predation risk', 'Mobility D-index', 'Home range size', 'Env. se
 
 # Phylogenetic PCA (function in 00_socio_ecology_functions.R)
 pca.eco.opp.alt <- phylo_pca(vars = variables, 
-                         data = data1, 
-                         tree = Petree, 
-                         type = 'Ecological Opportunity',
-                         invert.loading = 'PC1')
+                             data = data1, 
+                             tree = Petree, 
+                             type = 'Ecological Opportunity',
+                             invert.loading = 'PC1')
 ```
 
 ```{r ecooppalt}
 # output table PCA
-kable_phylo_pca_loadings(pca.eco.opp.alt$PC.loadings)
+kable_phylo_pca_loadings(pca.eco.opp.alt$PC.loadings[,c(1,2)],
+                         N = attributes(pca.eco.opp.alt$PC.loadings)$N)
 ```
 
-<br><br>
-
-**PGLS with PC scores**
-```{r}
-# add individual PC scores to data set
-data1_eco_opp.alt <- merge(data1, pca.eco.opp.alt$PC.scores, by = "Genus_species", all.x = T)
-# add residuals to data set for plotting
-data1_eco_opp.alt$ResBrainBody <- resid(m1 <- lm(log(Brain.Size) ~ log(Body.Mass), data = data1_eco_opp.alt, na.action = na.exclude))
-
-# comparative data for PGLS
-comp_data.alt <- comparative.data(phy = Petree, data = data1_eco_opp.alt, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim = 3)
-
-# PGLS analyses
-# model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity, data = comp_data.alt, lambda = 'ML')
-# kable_pgls(model1)
-# model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC2.Ecological.Opportunity, data = comp_data.alt, lambda = 'ML')
-# kable_pgls(model1)
-model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity, data = comp_data.alt, lambda='ML')
-kable_pgls(model1)
-
-```
-
-<br><br>
-
-### Social and ecological opportunities - common sample
-```{r}
-
-# Merge social and ecological PCs to data
-data1_soc_eco_opp_alt <- 
-  data1 %>% 
-    left_join(pca.soc.opp.alt$PC.scores, by = 'Genus_species') %>% 
-    left_join(pca.eco.opp.alt$PC.scores, by = 'Genus_species') %>% 
-    dplyr::select('Genus_species', 'Body.Mass', 'Brain.Size', dplyr::matches('PC1|PC2')) %>% 
-    filter(complete.cases(.))
-
-# comparative data
-comp_data_alt <- comparative.data(phy = Petree, data = data1_soc_eco_opp_alt, 
-                                  names.col = Genus_species, vcv = TRUE, 
-                                  na.omit = FALSE, warn.dropped = TRUE ,
-                                  vcv.dim = 3)
-
-# PGLS 
-model1 <- pgls(log(Brain.Size) ~  log(Body.Mass) + PC1.Ecological.Opportunity + PC2.Ecological.Opportunity +
-                 PC1.Social.Opportunity + PC2.Social.Opportunity, data = comp_data_alt, lambda='ML')
-kable_pgls(model1)
-
-
-model2 <- pgls(PC1.Social.Opportunity ~  PC1.Ecological.Opportunity, data = comp_data_alt, lambda='ML')
-kable_pgls(model2)
-```
 
 
 <br><br>
 
+Also in case of the *consequences*, the pPCA as well as the subsequent PGLS regressions result in equivalent patterns as the original analysis. For the ecological and social domain, all variables load highly on the first PC (Tables \@ref(tab:socconsalt), \@ref(tab:ecoconsalt)), and relative brain size shows strong effects on both, the social and ecological consequence PC (socio-cognitive PC1 PGLS: N = 55, λ = 0.00, β Brain = 16.393 (p = 0.007); eco-cognitive PC1 PGLS: N = 53, λ = 0.91, β Brain = 20.033 (p = 0.015); eco-cognitive PC2 PGLS: N = 53, λ = 0.00, β Brain = 17.910 (p < 0.001)). Also the relationsip between the social and ecological consequence PCs is highly significant (PGLS: N = 31, λ = 0.00, β PC1 Ecological Cons. = 0.889 (p < 0.001)), whereas there is no relationship between the opportunity PCs (results not shown).
 
-### Social consequences
 
-**Phylogenetic PCA**
+<br>
+
+
+**Phylogenetic PCA social consequences**
 ```{r, results='hide'}
 
 # choose variables to perform pPCA on:
@@ -1056,36 +655,13 @@ pca.soc.cons.alt <- phylo_pca(vars = variables,
 
 ```{r socconsalt}
 # output table PCA
-kable_phylo_pca_loadings(pca.soc.cons.alt$PC.loadings)
+kable_phylo_pca_loadings(data.frame(PC1 = pca.soc.cons.alt$PC.loadings[, c(1)]),
+                         N = attributes(pca.soc.cons.alt$PC.loadings)$N)
 ```
 
-<br><br>
+<br>
 
-**PGLS with PC scores**
-```{r}
-# add individual PC scores to data set
-data1_PC_alt <- merge(data1, pca.soc.cons.alt$PC.scores, by="Genus_species", all.x=T)
-# add residuals to data set for plotting
-data1_PC$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_PC_alt, na.action=na.exclude))
-
-# comparative data for PGLS
-comp_data_alt <- comparative.data(phy = Petree, data = data1_PC_alt, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
-
-# PGLS analyses
-model1 <- pgls(PC1.Social.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data_alt, lambda='ML')
-kable_pgls(model1)
-model1 <- pgls(PC2.Social.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data_alt, lambda='ML')
-kable_pgls(model1)
-
-```
-
-
-<br><br>
-
-
-### Ecological consequences
-
-**Phylogenetic PCA**
+**Phylogenetic PCA ecological consequences**
 ```{r, results = 'hide'}
 
 # choose variables to perform pPCA on:
@@ -1101,58 +677,12 @@ pca.eco.cons.alt <- phylo_pca(vars = variables,
 
 ```{r ecoconsalt}
 # output table PCA
-kable_phylo_pca_loadings(pca.eco.cons.alt$PC.loadings)
-```
-
-<br><br>
-
-**PGLS with PC scores**
-```{r}
-# add individual PC scores to data set
-data1_PC_alt <- merge(data1, pca.eco.cons.alt$PC.scores, by="Genus_species", all.x=T)
-# add residuals to data set for plotting
-data1_PC$ResBrainBody <- resid(m1<-lm(log(Brain.Size) ~ log(Body.Mass), data = data1_PC_alt, na.action = na.exclude))
-
-# comparative data for PGLS
-comp_data_alt <- comparative.data(phy = Petree, data = data1_PC_alt, names.col = Genus_species, vcv = TRUE, na.omit = FALSE, warn.dropped = TRUE ,vcv.dim=3)
-
-# PGLS analyses
-model1 <- pgls(PC1.Ecological.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data_alt, lambda='ML')
-kable_pgls(model1)
-model1 <- pgls(PC2.Ecological.Consequence ~  log(Body.Mass) + log(Brain.Size), data = comp_data_alt, lambda='ML')
-kable_pgls(model1)
-
+kable_phylo_pca_loadings(data.frame(PC1 = pca.eco.cons.alt$PC.loadings[,1]),
+                         N = attributes(pca.eco.cons.alt$PC.loadings)$N)
 ```
 
 
 <br><br>
-
-### Social and ecological consequences - common sample
-```{r}
-
-# Merge social and ecological PCs to data
-data1_soc_eco_cons_alt <- 
-  data1 %>% 
-    left_join(pca.soc.cons.alt$PC.scores, by = 'Genus_species') %>% 
-    left_join(pca.eco.cons.alt$PC.scores, by = 'Genus_species') %>% 
-    dplyr::select('Genus_species', 'Body.Mass', 'Brain.Size', dplyr::matches('PC1|PC2')) %>% 
-    filter(complete.cases(.))
-
-# comparative data
-comp_data_alt <- comparative.data(phy = Petree, data = data1_soc_eco_cons_alt, 
-                                  names.col = Genus_species, vcv = TRUE, 
-                                  na.omit = FALSE, warn.dropped = TRUE ,
-                                  vcv.dim = 3)
-
-# PGLS 
-model1 <- pgls(PC1.Social.Consequence ~  PC1.Ecological.Consequence, data = comp_data_alt, lambda='ML')
-kable_pgls(model1)
-```
-
-
-
-<br><br>
-
 
 
 
@@ -1278,9 +808,5 @@ average_model <- average(result, cut_off = 3)
 knitr::include_graphics(path = 'Plots/Path_models_A3_A2.png')
 ```
 
-<br>
 
-```{r echo=FALSE, dpi = 50, fig.align = 'center', fig.cap = "Phylogenetic Path Analysis. Average model, based on models A3 and A2."}
-knitr::include_graphics(path = 'Plots/Average_path_model.png')
-```
 
